@@ -665,7 +665,7 @@ FocusScope {
 
         metaData {
             orientation: captureView.captureOrientation
-            cameraModel: deviceInfo.model
+            cameraModel: deviceInfo.prettyName
             cameraManufacturer: deviceInfo.manufacturer
         }
 
