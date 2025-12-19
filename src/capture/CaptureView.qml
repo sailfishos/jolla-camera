@@ -476,7 +476,6 @@ FocusScope {
         }
 
         property bool hasCameraOnBothSides
-        property string frontFacingDeviceId
         property var backFacingCameras
 
         // On some adaptations media booster makes camera initialization fail
@@ -547,7 +546,7 @@ FocusScope {
                     var device = QtMultimedia.availableCameras[i]
                     if (!hasFrontFace && device.position === Camera.FrontFace) {
                         hasFrontFace = true
-                        frontFacingDeviceId = device.deviceId
+                        Settings.global.frontFacingDeviceId = device.deviceId
                     } else if (device.position === Camera.BackFace) {
                         hasBackFace = true
                         backCameras.push(device)
