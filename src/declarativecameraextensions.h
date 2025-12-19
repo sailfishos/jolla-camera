@@ -13,8 +13,9 @@
 class DeclarativeCameraExtensions : public QObject
 {
     Q_OBJECT
+
 public:
-    DeclarativeCameraExtensions(QObject *parent = 0);
+    DeclarativeCameraExtensions(QObject *parent = nullptr);
     ~DeclarativeCameraExtensions();
 
     Q_INVOKABLE void disableNotifications(QQuickItem *item, bool disable);

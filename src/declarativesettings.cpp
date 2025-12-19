@@ -46,7 +46,6 @@ DeclarativeSettings::DeclarativeSettings(QObject *parent)
 
 DeclarativeSettings::~DeclarativeSettings()
 {
-
 }
 
 QObject *DeclarativeSettings::factory(QQmlEngine *engine, QJSEngine *)
@@ -58,7 +57,8 @@ QObject *DeclarativeSettings::factory(QQmlEngine *engine, QJSEngine *)
     } else {
         qWarning() << "Failed to instantiate Settings";
         qWarning() << component.errors();
-        return 0;
+
+        return nullptr;
     }
 }
 

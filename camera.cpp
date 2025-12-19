@@ -18,7 +18,6 @@
 #include <MDeclarativeCache>
 #endif
 
-
 Q_DECL_EXPORT int main(int argc, char *argv[])
 {
     QQuickWindow::setDefaultAlphaBuffer(true);
@@ -37,7 +36,6 @@ Q_DECL_EXPORT int main(int argc, char *argv[])
 
     view->setSource(path + QLatin1String("camera.qml"));
     //% "Camera"
-    QT_TRID_NOOP("jolla-camera-ap-name");
     view->setTitle(qtTrId("jolla-camera-ap-name"));
 
     if (app->arguments().contains("-desktop")) {

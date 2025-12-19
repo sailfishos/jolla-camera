@@ -45,7 +45,7 @@ public:
 
     Q_ENUM(AspectRatio)
 
-    CameraConfigs(QObject *parent = 0);
+    CameraConfigs(QObject *parent = nullptr);
     ~CameraConfigs();
 
     QList<QObject *> exposedItems() const;
@@ -81,10 +81,12 @@ signals:
     void supportedFocusPointModesChanged();
     void supportedMeteringModesChanged();
     void supportedFlashModesChanged();
+
 private slots:
     void handleStatus();
     void handleState();
     void handleCaptureMode();
+
 private:
     bool m_ready = false;
     QCamera *m_camera = nullptr;
@@ -103,4 +105,3 @@ private:
 };
 
 #endif // CAMERACONFIGS_H
-

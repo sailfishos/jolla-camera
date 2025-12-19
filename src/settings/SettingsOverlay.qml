@@ -304,7 +304,8 @@ PinchArea {
                     overlay.topMenuOpen = false
                 }
                 // don't react near display edges
-                if (outOfBounds(mouseX, mouseY)) return
+                if (outOfBounds(mouseX, mouseY))
+                    return
                 if (whiteBalanceMenu.expanded) {
                     whiteBalanceMenu.open = false
                 } else if (overlay.inButtonLayout) {
