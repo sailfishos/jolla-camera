@@ -66,8 +66,8 @@ CameraPage {
             if (switchToImageMode) {
                 Settings.global.captureMode = "image"
             }
-            if (Settings.frontFacingDeviceId >= 0) {
-                Settings.deviceId = Settings.frontFacingDeviceId
+            if (Settings.global.frontFacingDeviceId !== "") {
+                Settings.deviceId = Settings.global.frontFacingDeviceId
             } else {
                 console.warn("No front camera detected")
             }

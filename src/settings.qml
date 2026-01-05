@@ -52,6 +52,7 @@ SettingsBase {
         // Note! don't touch this for changing between cameras, see cameraDevice on root
         property string deviceId
         property string previousBackFacingDeviceId
+        property string frontFacingDeviceId
         property int position: Camera.BackFace
         property string captureMode: "image"
 

@@ -30,8 +30,9 @@ class DeclarativeSettings : public QObject
     Q_PROPERTY(qint64 storageMaxFileSize READ storageMaxFileSize NOTIFY storageMaxFileSizeChanged)
     Q_PROPERTY(StoragePathStatus storagePathStatus READ storagePathStatus NOTIFY storagePathStatusChanged)
     Q_ENUMS(StoragePathStatus)
+
 public:
-    DeclarativeSettings(QObject *parent = 0);
+    DeclarativeSettings(QObject *parent = nullptr);
     ~DeclarativeSettings();
 
     static QObject *factory(QQmlEngine *, QJSEngine *);
@@ -89,4 +90,3 @@ private:
 };
 
 #endif
-

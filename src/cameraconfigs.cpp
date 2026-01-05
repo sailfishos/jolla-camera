@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "cameraconfigs.h"
+
 #include <QCamera>
 #include <QMediaRecorder>
 #include <QCameraImageCapture>

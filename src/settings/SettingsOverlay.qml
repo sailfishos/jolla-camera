@@ -162,7 +162,7 @@ PinchArea {
         visible: opacity > 0.0
                  && !!model && model.length > 1
                  && labels.length > 0
-                 && Settings.deviceId !== camera.frontFacingDeviceId
+                 && Settings.deviceId !== Settings.global.frontFacingDeviceId
                  && !inButtonLayout
         orientation: overlay.isPortrait ? Qt.Horizontal : Qt.Vertical
         enabled: camera.cameraStatus === Camera.ActiveStatus
@@ -193,7 +193,7 @@ PinchArea {
         anchors.centerIn: parent
         onClicked: {
             if (Settings.global.position === Camera.BackFace) {
-                Settings.deviceId = camera.frontFacingDeviceId
+                Settings.deviceId = Settings.global.frontFacingDeviceId
             } else {
                 Settings.deviceId = Settings.global.previousBackFacingDeviceId
             }
@@ -304,7 +304,8 @@ PinchArea {
                     overlay.topMenuOpen = false
                 }
                 // don't react near display edges
-                if (outOfBounds(mouseX, mouseY)) return
+                if (outOfBounds(mouseX, mouseY))
+                    return
                 if (whiteBalanceMenu.expanded) {
                     whiteBalanceMenu.open = false
                 } else if (overlay.inButtonLayout) {

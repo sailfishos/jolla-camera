@@ -25,13 +25,14 @@ class CaptureModel : public QAbstractListModel, public QQmlParserStatus
     Q_PROPERTY(bool populated READ isPopulated NOTIFY populatedChanged)
     Q_PROPERTY(QStringList directories READ directories WRITE setDirectories NOTIFY directoriesChanged)
     Q_PROPERTY(int count READ count NOTIFY countChanged)
+
 public:
     enum {
         Url,
         MimeType
     };
 
-    CaptureModel(QObject *parent = 0);
+    CaptureModel(QObject *parent = nullptr);
     ~CaptureModel() override;
 
     bool isPopulated() const;
@@ -51,7 +52,6 @@ public:
 
     void classBegin() override;
     void componentComplete() override;
-
 
 signals:
     void populatedChanged();
