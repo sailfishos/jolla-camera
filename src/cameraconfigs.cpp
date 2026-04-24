@@ -8,7 +8,7 @@
 #include <QCamera>
 #include <QMediaRecorder>
 #include <QCameraImageCapture>
-#include <mgconfitem.h>
+#include <mdconfitem.h>
 
 CameraConfigs::CameraConfigs(QObject *parent)
     : QObject(parent)
@@ -88,7 +88,7 @@ void CameraConfigs::handleStatus()
                 m_supportedVideoResolutions.clear();
 
                 QSize maxVideoResolution;
-                QVariant value(MGConfItem("/apps/jolla-camera/maxVideoResolution").value());
+                QVariant value(MDConfItem("/apps/jolla-camera/maxVideoResolution").value());
                 if (!value.isNull()) {
                     QStringList values = value.toString().split('x');
                     if (values.size() == 2) {
@@ -97,8 +97,8 @@ void CameraConfigs::handleStatus()
                 }
 
                 for (const QSize resolution : recorder->supportedResolutions()) {
-                    if (!maxVideoResolution.isValid() || (resolution.height() <= maxVideoResolution.height() &&
-                                                          resolution.width() <= maxVideoResolution.width())) {
+                    if (!maxVideoResolution.isValid() || (resolution.height() <= maxVideoResolution.height()
+                                                          && resolution.width() <= maxVideoResolution.width())) {
                         m_supportedVideoResolutions.append(resolution);
                     }
                 }
@@ -106,7 +106,6 @@ void CameraConfigs::handleStatus()
 
             m_supportedIsoSensitivities.clear();
             for (int value : m_camera->exposure()->supportedIsoSensitivities()) {
-
                 // Filter out invalid ISO value
                 if (value != 1) {
                     m_supportedIsoSensitivities.append(value);
@@ -114,16 +113,16 @@ void CameraConfigs::handleStatus()
             }
             std::sort(m_supportedIsoSensitivities.begin(), m_supportedIsoSensitivities.end());
 
-            auto updateSupportedModes = [](QVariantList &modes, QLatin1String modeName,
+            auto updateSupportedModes = [](QVariantList *modes, QLatin1String modeName,
                                            const QMetaObject &meta, auto isSupported) {
-                modes.clear();
+                modes->clear();
                 // TODO: Use QMetaEnum::fromType<Class::EnumName>() once Qt Multimedia uses Q_ENUM
                 int i = meta.indexOfEnumerator(modeName.data());
                 QMetaEnum e = meta.enumerator(i);
                 for (int j = 0; j < e.keyCount(); j++) {
                     int mode = e.value(j);
                     if (isSupported(mode)) {
-                        modes << mode;
+                        (*modes) << mode;
                     }
                 }
             };
@@ -131,43 +130,43 @@ void CameraConfigs::handleStatus()
             auto isWhiteBalanceModeSupported = [this](int mode) {
                 return m_camera->imageProcessing()->isWhiteBalanceModeSupported(static_cast<QCameraImageProcessing::WhiteBalanceMode>(mode));
             };
-            updateSupportedModes(m_supportedWhiteBalanceModes, QLatin1String("WhiteBalanceMode"),
+            updateSupportedModes(&m_supportedWhiteBalanceModes, QLatin1String("WhiteBalanceMode"),
                                  QCameraImageProcessing::staticMetaObject, isWhiteBalanceModeSupported);
 
             auto isExposureModeSupported = [this](int mode) {
                 return m_camera->exposure()->isExposureModeSupported(static_cast<QCameraExposure::ExposureMode>(mode));
             };
-            updateSupportedModes(m_supportedExposureModes, QLatin1String("ExposureMode"),
+            updateSupportedModes(&m_supportedExposureModes, QLatin1String("ExposureMode"),
                                  QCameraExposure::staticMetaObject, isExposureModeSupported);
 
             auto isColorFilterSupported = [this](int mode) {
                 return m_camera->imageProcessing()->isColorFilterSupported(static_cast<QCameraImageProcessing::ColorFilter>(mode));
             };
-            updateSupportedModes(m_supportedColorFilters, QLatin1String("ColorFilter"),
+            updateSupportedModes(&m_supportedColorFilters, QLatin1String("ColorFilter"),
                                  QCameraImageProcessing::staticMetaObject, isColorFilterSupported);
 
             auto isFocusModeSupported = [this](int mode) {
                 return m_camera->focus()->isFocusModeSupported(static_cast<QCameraFocus::FocusMode>(mode));
             };
-            updateSupportedModes(m_supportedFocusModes, QLatin1String("FocusMode"),
+            updateSupportedModes(&m_supportedFocusModes, QLatin1String("FocusMode"),
                                  QCameraFocus::staticMetaObject, isFocusModeSupported);
 
             auto isFocusPointModeSupported = [this](int mode) {
                 return m_camera->focus()->isFocusPointModeSupported(static_cast<QCameraFocus::FocusPointMode>(mode));
             };
-            updateSupportedModes(m_supportedFocusPointModes, QLatin1String("FocusPointMode"),
+            updateSupportedModes(&m_supportedFocusPointModes, QLatin1String("FocusPointMode"),
                                  QCameraFocus::staticMetaObject, isFocusPointModeSupported);
 
             auto isMeteringModeSupported = [this](int mode) {
                 return m_camera->exposure()->isMeteringModeSupported(static_cast<QCameraExposure::MeteringMode>(mode));
             };
-            updateSupportedModes(m_supportedMeteringModes, QLatin1String("MeteringMode"),
+            updateSupportedModes(&m_supportedMeteringModes, QLatin1String("MeteringMode"),
                                  QCameraExposure::staticMetaObject, isMeteringModeSupported);
 
             auto isFlashModeSupported = [this](int mode) {
                 return m_camera->exposure()->isFlashModeSupported(static_cast<QCameraExposure::FlashModes>(mode));
             };
-            updateSupportedModes(m_supportedFlashModes, QLatin1String("FlashMode"),
+            updateSupportedModes(&m_supportedFlashModes, QLatin1String("FlashMode"),
                                  QCameraExposure::staticMetaObject, isFlashModeSupported);
 
             m_ready = true;
