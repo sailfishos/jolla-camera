@@ -8,7 +8,7 @@
 #include <QCamera>
 #include <QMediaRecorder>
 #include <QCameraImageCapture>
-#include <mgconfitem.h>
+#include <mdconfitem.h>
 
 CameraConfigs::CameraConfigs(QObject *parent)
     : QObject(parent)
@@ -88,7 +88,7 @@ void CameraConfigs::handleStatus()
                 m_supportedVideoResolutions.clear();
 
                 QSize maxVideoResolution;
-                QVariant value(MGConfItem("/apps/jolla-camera/maxVideoResolution").value());
+                QVariant value(MDConfItem("/apps/jolla-camera/maxVideoResolution").value());
                 if (!value.isNull()) {
                     QStringList values = value.toString().split('x');
                     if (values.size() == 2) {

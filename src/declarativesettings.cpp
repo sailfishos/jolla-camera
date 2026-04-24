@@ -89,7 +89,7 @@ void DeclarativeSettings::setStoragePath(const QString &path)
         m_storagePath.set(path);
     }
 
-    // notifiers will be handled by the MGConfItem change signal connection
+    // notifiers will be handled by the MDConfItem change signal connection
 }
 
 DeclarativeSettings::StoragePathStatus DeclarativeSettings::storagePathStatus() const

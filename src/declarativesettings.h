@@ -12,7 +12,7 @@
 #include <QDateTime>
 
 #include <QUrl>
-#include <MGConfItem>
+#include <MDConfItem>
 
 QT_BEGIN_NAMESPACE
 class QQmlEngine;
@@ -77,8 +77,8 @@ private:
     QString capturePath(const QString &format);
 
     PartitionManager *m_partitionManager;
-    MGConfItem m_storagePath;
-    MGConfItem m_minSpaceForRecording;
+    MDConfItem m_storagePath;
+    MDConfItem m_minSpaceForRecording;
 
     QString m_prefix;
     QString m_photoDirectory;
