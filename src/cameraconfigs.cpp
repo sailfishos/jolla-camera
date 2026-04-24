@@ -97,8 +97,8 @@ void CameraConfigs::handleStatus()
                 }
 
                 for (const QSize resolution : recorder->supportedResolutions()) {
-                    if (!maxVideoResolution.isValid() || (resolution.height() <= maxVideoResolution.height() &&
-                                                          resolution.width() <= maxVideoResolution.width())) {
+                    if (!maxVideoResolution.isValid() || (resolution.height() <= maxVideoResolution.height()
+                                                          && resolution.width() <= maxVideoResolution.width())) {
                         m_supportedVideoResolutions.append(resolution);
                     }
                 }
@@ -106,7 +106,6 @@ void CameraConfigs::handleStatus()
 
             m_supportedIsoSensitivities.clear();
             for (int value : m_camera->exposure()->supportedIsoSensitivities()) {
-
                 // Filter out invalid ISO value
                 if (value != 1) {
                     m_supportedIsoSensitivities.append(value);
