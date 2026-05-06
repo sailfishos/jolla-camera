@@ -6,10 +6,25 @@
 #include <QDir>
 #include <QTranslator>
 #include <QLocale>
+#include <QElapsedTimer>
+#include <QDebug>
 
 #include <QGuiApplication>
 #include <QQmlEngine>
 #include <QQmlContext>
+
+static bool cameraStartupLoggingEnabled()
+{
+    static const bool enabled = !qgetenv("CAMERA_STARTUP_LOG").isEmpty();
+    return enabled;
+}
+
+#define CAMERA_STARTUP_MARK(scope, timer, format, ...) \
+    do { \
+        if (cameraStartupLoggingEnabled()) \
+            qInfo("CAMERA_STARTUP " scope " %lld ms " format, \
+                  static_cast<long long>((timer).elapsed()), ##__VA_ARGS__); \
+    } while (false)
 #include <QQuickItem>
 #include <QQuickView>
 #include <QQmlComponent>
@@ -21,6 +36,10 @@
 
 Q_DECL_EXPORT int main(int argc, char *argv[])
 {
+    QElapsedTimer startupTimer;
+    startupTimer.start();
+    CAMERA_STARTUP_MARK("lockscreen-app", startupTimer, "main entered");
+
     QQuickWindow::setDefaultAlphaBuffer(true);
 
 #ifdef HAS_BOOSTER
@@ -36,6 +55,7 @@ Q_DECL_EXPORT int main(int argc, char *argv[])
     view->engine()->setBaseUrl(QUrl::fromLocalFile(path));
 
     view->setSource(path + QLatin1String("lockscreen.qml"));
+    CAMERA_STARTUP_MARK("lockscreen-app", startupTimer, "lockscreen.qml loaded status=%d", view->status());
     view->setTitle(qtTrId("jolla-camera-ap-name"));
 
     QObject::connect(view->engine(), &QQmlEngine::quit, app.data(), &QCoreApplication::quit);
@@ -44,8 +64,10 @@ Q_DECL_EXPORT int main(int argc, char *argv[])
         view->resize(480, 854);
         view->rootObject()->setProperty("_desktop", true);
         view->show();
+        CAMERA_STARTUP_MARK("lockscreen-app", startupTimer, "desktop window shown");
     } else {
         view->showFullScreen();
+        CAMERA_STARTUP_MARK("lockscreen-app", startupTimer, "fullscreen window shown");
     }
 
     return app->exec();
