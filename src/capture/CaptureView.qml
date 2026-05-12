@@ -479,11 +479,18 @@ FocusScope {
         property var backFacingCameras
 
         // On some adaptations media booster makes camera initialization fail
-        // and Camera must be reloaded, try to do that once when that happens
-        property bool needsReload: camera.errorCode === Camera.CameraError
-                                   || (camera.cameraState === Camera.UnloadedState
-                                       && camera.cameraStatus === Camera.UnloadedStatus)
+        // and Camera must be reloaded, try to do that once when that happens.
+        // Wait until the Camera item has completed and activation has been
+        // requested before checking so its construction-time default
+        // UnloadedState/UnloadedStatus is not treated as a reload failure.
+        property bool reloadCheckEnabled
+        property bool needsReload: reloadCheckEnabled
+                                   && captureView.effectiveActive
+                                   && (camera.errorCode === Camera.CameraError
+                                       || (camera.cameraState === Camera.UnloadedState
+                                           && camera.cameraStatus === Camera.UnloadedStatus))
 
+        Component.onCompleted: reloadCheckEnabled = true
 
         onErrorCodeChanged: {
             if (errorCode == Camera.CameraError) {
