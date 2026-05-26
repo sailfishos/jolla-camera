@@ -66,7 +66,7 @@ FocusScope {
                                                 : 0)
 
     readonly property bool isPortrait: orientation == Orientation.Portrait
-                || orientation == Orientation.PortraitInverted
+                                       || orientation == Orientation.PortraitInverted
     readonly property bool effectiveActive: (active || recording) && _applicationActive && pageStack.depth < 2
 
     readonly property bool _canCapture: {
@@ -120,6 +120,7 @@ FocusScope {
         id: captureSnapshot
 
         property alias sourceItem: captureSnapshotEffect.sourceItem
+
         visible: false
         anchors.verticalCenter: parent.verticalCenter
         width: parent.width*captureSnapshotEffect.scale
@@ -200,7 +201,6 @@ FocusScope {
     }
 
     function aspectRatioToFraction(aspectRatio) {
-
         var ratio = 4.0/3.0
         if (aspectRatio === CameraConfigs.AspectRatio_16_9) {
             ratio = 16.0/9.0
@@ -211,7 +211,6 @@ FocusScope {
     }
 
     function _pickResolution(resolutions, aspectRatio) {
-
         var ratio = aspectRatioToFraction(aspectRatio)
 
         if (resolutions && resolutions.length > 0) {
@@ -296,8 +295,6 @@ FocusScope {
     }
 
     Timer {
-        id: reloadTimer
-
         interval: 1000
         running: captureView._unload && (camera.cameraStatus === Camera.UnloadedStatus
                                          || camera.cameraStatus === Camera.CameraError)
@@ -818,11 +815,11 @@ FocusScope {
     }
 
     function incubateOverlay() {
-        overlayIncubator = overlayComponent.incubateObject(captureView, {
-                                                                      "captureView": captureView,
-                                                                      "camera": camera,
-                                                                      "focusArea": focusArea
-                                                                  }, Qt.Asynchronous)
+        overlayIncubator = overlayComponent.incubateObject(captureView,
+                                                           { "captureView": captureView,
+                                                             "camera": camera,
+                                                             "focusArea": focusArea
+                                                           }, Qt.Asynchronous)
         overlayIncubator.onStatusChanged = function(status) {
             if (status == Component.Ready) {
                 captureOverlay = overlayIncubator.object
@@ -880,8 +877,6 @@ FocusScope {
                 visible: status != Camera.FocusAreaUnused && camera.focus.focusPointMode == Camera.FocusPointCustom
 
                 Rectangle {
-                    id: focusRectangle
-
                     width: Math.min(parent.width, parent.height)
                     height: width
                     anchors.centerIn: parent
@@ -996,10 +991,12 @@ FocusScope {
     DBusInterface {
         id: flashlightServiceProbe
 
+        property bool flashlightServiceActive
+
         service: "org.freedesktop.DBus"
         path: "/org/freedesktop/DBus"
         iface: "org.freedesktop.DBus"
-        property bool flashlightServiceActive
+
         onFlashlightServiceActiveChanged: {
             if (flashlightServiceActive) {
                 if (flashlightComponentLoader.sourceComponent == null
@@ -1039,10 +1036,13 @@ FocusScope {
             service: "com.jolla.settings.system.flashlight"
             path: "/com/jolla/settings/system/flashlight"
             iface: "com.jolla.settings.system.flashlight"
+
             Component.onCompleted: toggleFlashlight()
+
             function toggleFlashlight() {
                 var isOn = flashlightDbus.getProperty("flashlightOn")
-                if (isOn) flashlightDbus.call("toggleFlashlight")
+                if (isOn)
+                    flashlightDbus.call("toggleFlashlight")
             }
         }
     }
