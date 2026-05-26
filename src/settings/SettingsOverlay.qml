@@ -172,7 +172,7 @@ PinchArea {
             if (_overlayPosition.backCameraToggle === Qt.AlignLeft) {
                 return parent.width + Theme.paddingLarge
             } else if (_overlayPosition.backCameraToggle === Qt.AlignRight) {
-                return -width - (isPortrait ? 1 : 3) * Theme.paddingLarge
+                return -width - (isPortrait ? 1 : 2) * Theme.paddingLarge
             }
 
             return parent.width/2 - width/2
@@ -180,7 +180,7 @@ PinchArea {
 
         y: {
             if (_overlayPosition.backCameraToggle & Qt.AlignBottom) {
-                return -height - (overlay.isPortrait ? 3 : 1) * Theme.paddingLarge
+                return -height - (overlay.isPortrait ? 2 : 1) * Theme.paddingLarge
             }
 
             return parent.height/2 - height/2

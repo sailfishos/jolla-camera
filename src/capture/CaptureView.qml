@@ -62,7 +62,7 @@ FocusScope {
                                                       isPortrait ? (focusArea.width - height) / 2
                                                                  : (focusArea.width - width) / 2)
                                              + ((reallyWideScreen && (focusArea.width / focusArea.height <= 1.4))
-                                                ? Theme.itemSizeLarge + (isPortrait ? Screen.topCutout.height : 0)
+                                                ? Theme.itemSizeLarge + Screen.topCutout.height
                                                 : 0)
 
     readonly property bool isPortrait: orientation == Orientation.Portrait
