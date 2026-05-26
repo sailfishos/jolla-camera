@@ -11,7 +11,6 @@ import Sailfish.Policy 1.0
 import com.jolla.camera 1.0
 import Nemo.Policy 1.0
 import Nemo.Ngf 1.0
-import Nemo.DBus 2.0
 import Nemo.Notifications 1.0
 import org.nemomobile.systemsettings 1.0
 
@@ -106,7 +105,6 @@ FocusScope {
     readonly property bool _verticalMirror: _mirrorViewfinder && camera.orientation % 180 != 0
 
     readonly property bool _applicationActive: Qt.application.state == Qt.ApplicationActive
-    on_ApplicationActiveChanged: if (_applicationActive) flashlightServiceProbe.checkFlashlightServiceStatus()
 
     readonly property string deviceId: Settings.deviceId
 
@@ -263,7 +261,6 @@ FocusScope {
     }
 
     Component.onCompleted: {
-        flashlightServiceProbe.checkFlashlightServiceStatus()
         loadOverlay()
     }
 
@@ -985,65 +982,6 @@ FocusScope {
         Resource {
             type: Resource.SnapButton
             optional: true
-        }
-    }
-
-    DBusInterface {
-        id: flashlightServiceProbe
-
-        property bool flashlightServiceActive
-
-        service: "org.freedesktop.DBus"
-        path: "/org/freedesktop/DBus"
-        iface: "org.freedesktop.DBus"
-
-        onFlashlightServiceActiveChanged: {
-            if (flashlightServiceActive) {
-                if (flashlightComponentLoader.sourceComponent == null
-                        || flashlightComponentLoader.sourceComponent == undefined) {
-                    flashlightComponentLoader.sourceComponent = flashlightComponent
-                } else {
-                    flashlightComponentLoader.item.toggleFlashlight()
-                }
-            }
-        }
-        function checkFlashlightServiceStatus() {
-            var probe = flashlightServiceProbe // cache id resolution to avoid context destruction issues
-            typedCall('NameHasOwner',
-                      { 'type': 's', 'value': 'com.jolla.settings.system.flashlight' },
-                      function(result) {
-                          // twiddle so that the change-handler is invoked
-                          probe.flashlightServiceActive = false
-                          probe.flashlightServiceActive = result
-                      },
-                      function() {
-                          // assume true in failed case, to ensure we turn it off
-                          probe.flashlightServiceActive = false
-                          probe.flashlightServiceActive = true
-                      })
-        }
-    }
-
-    Loader { id: flashlightComponentLoader }
-
-    Component {
-        id: flashlightComponent
-
-        DBusInterface {
-            id: flashlightDbus
-
-            bus: DBusInterface.SessionBus
-            service: "com.jolla.settings.system.flashlight"
-            path: "/com/jolla/settings/system/flashlight"
-            iface: "com.jolla.settings.system.flashlight"
-
-            Component.onCompleted: toggleFlashlight()
-
-            function toggleFlashlight() {
-                var isOn = flashlightDbus.getProperty("flashlightOn")
-                if (isOn)
-                    flashlightDbus.call("toggleFlashlight")
-            }
         }
     }
 
