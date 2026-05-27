@@ -146,7 +146,7 @@ PinchArea {
         }
 
         parent: {
-            switch(_overlayPosition.backCameraToggle) {
+            switch (_overlayPosition.backCameraToggle) {
             case Qt.AlignBottom:
                 return overlayAnchorBC
             case Qt.AlignLeft:
@@ -172,19 +172,18 @@ PinchArea {
             if (_overlayPosition.backCameraToggle === Qt.AlignLeft) {
                 return parent.width + Theme.paddingLarge
             } else if (_overlayPosition.backCameraToggle === Qt.AlignRight) {
-                return -width - (isPortrait ? 1 : 3) * Theme.paddingLarge
-            } else {
-                return parent.width/2 - width/2
+                return -width - (isPortrait ? 1 : 2) * Theme.paddingLarge
             }
+
+            return parent.width/2 - width/2
         }
 
         y: {
-            var padding = Theme.paddingLarge
             if (_overlayPosition.backCameraToggle & Qt.AlignBottom) {
-                return -height - (overlay.isPortrait ? 3 : 1) * Theme.paddingLarge
-            } else {
-                return parent.height/2 - height/2
+                return -height - (overlay.isPortrait ? 2 : 1) * Theme.paddingLarge
             }
+
+            return parent.height/2 - height/2
         }
     }
 

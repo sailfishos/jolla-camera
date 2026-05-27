@@ -9,3 +9,5 @@ moc_*
 *.moc
 *.pro.user
 Makefile
+*.ts
+*.qm

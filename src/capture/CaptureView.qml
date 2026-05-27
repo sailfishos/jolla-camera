@@ -11,7 +11,6 @@ import Sailfish.Policy 1.0
 import com.jolla.camera 1.0
 import Nemo.Policy 1.0
 import Nemo.Ngf 1.0
-import Nemo.DBus 2.0
 import Nemo.Notifications 1.0
 import org.nemomobile.systemsettings 1.0
 
@@ -62,11 +61,11 @@ FocusScope {
                                                       isPortrait ? (focusArea.width - height) / 2
                                                                  : (focusArea.width - width) / 2)
                                              + ((reallyWideScreen && (focusArea.width / focusArea.height <= 1.4))
-                                                ? Theme.itemSizeLarge + (isPortrait ? Screen.topCutout.height : 0)
+                                                ? Theme.itemSizeLarge + Screen.topCutout.height
                                                 : 0)
 
     readonly property bool isPortrait: orientation == Orientation.Portrait
-                || orientation == Orientation.PortraitInverted
+                                       || orientation == Orientation.PortraitInverted
     readonly property bool effectiveActive: (active || recording) && _applicationActive && pageStack.depth < 2
 
     readonly property bool _canCapture: {
@@ -106,7 +105,6 @@ FocusScope {
     readonly property bool _verticalMirror: _mirrorViewfinder && camera.orientation % 180 != 0
 
     readonly property bool _applicationActive: Qt.application.state == Qt.ApplicationActive
-    on_ApplicationActiveChanged: if (_applicationActive) flashlightServiceProbe.checkFlashlightServiceStatus()
 
     readonly property string deviceId: Settings.deviceId
 
@@ -120,6 +118,7 @@ FocusScope {
         id: captureSnapshot
 
         property alias sourceItem: captureSnapshotEffect.sourceItem
+
         visible: false
         anchors.verticalCenter: parent.verticalCenter
         width: parent.width*captureSnapshotEffect.scale
@@ -200,7 +199,6 @@ FocusScope {
     }
 
     function aspectRatioToFraction(aspectRatio) {
-
         var ratio = 4.0/3.0
         if (aspectRatio === CameraConfigs.AspectRatio_16_9) {
             ratio = 16.0/9.0
@@ -211,7 +209,6 @@ FocusScope {
     }
 
     function _pickResolution(resolutions, aspectRatio) {
-
         var ratio = aspectRatioToFraction(aspectRatio)
 
         if (resolutions && resolutions.length > 0) {
@@ -264,7 +261,6 @@ FocusScope {
     }
 
     Component.onCompleted: {
-        flashlightServiceProbe.checkFlashlightServiceStatus()
         loadOverlay()
     }
 
@@ -296,8 +292,6 @@ FocusScope {
     }
 
     Timer {
-        id: reloadTimer
-
         interval: 1000
         running: captureView._unload && (camera.cameraStatus === Camera.UnloadedStatus
                                          || camera.cameraStatus === Camera.CameraError)
@@ -818,11 +812,11 @@ FocusScope {
     }
 
     function incubateOverlay() {
-        overlayIncubator = overlayComponent.incubateObject(captureView, {
-                                                                      "captureView": captureView,
-                                                                      "camera": camera,
-                                                                      "focusArea": focusArea
-                                                                  }, Qt.Asynchronous)
+        overlayIncubator = overlayComponent.incubateObject(captureView,
+                                                           { "captureView": captureView,
+                                                             "camera": camera,
+                                                             "focusArea": focusArea
+                                                           }, Qt.Asynchronous)
         overlayIncubator.onStatusChanged = function(status) {
             if (status == Component.Ready) {
                 captureOverlay = overlayIncubator.object
@@ -880,8 +874,6 @@ FocusScope {
                 visible: status != Camera.FocusAreaUnused && camera.focus.focusPointMode == Camera.FocusPointCustom
 
                 Rectangle {
-                    id: focusRectangle
-
                     width: Math.min(parent.width, parent.height)
                     height: width
                     anchors.centerIn: parent
@@ -990,60 +982,6 @@ FocusScope {
         Resource {
             type: Resource.SnapButton
             optional: true
-        }
-    }
-
-    DBusInterface {
-        id: flashlightServiceProbe
-
-        service: "org.freedesktop.DBus"
-        path: "/org/freedesktop/DBus"
-        iface: "org.freedesktop.DBus"
-        property bool flashlightServiceActive
-        onFlashlightServiceActiveChanged: {
-            if (flashlightServiceActive) {
-                if (flashlightComponentLoader.sourceComponent == null
-                        || flashlightComponentLoader.sourceComponent == undefined) {
-                    flashlightComponentLoader.sourceComponent = flashlightComponent
-                } else {
-                    flashlightComponentLoader.item.toggleFlashlight()
-                }
-            }
-        }
-        function checkFlashlightServiceStatus() {
-            var probe = flashlightServiceProbe // cache id resolution to avoid context destruction issues
-            typedCall('NameHasOwner',
-                      { 'type': 's', 'value': 'com.jolla.settings.system.flashlight' },
-                      function(result) {
-                          // twiddle so that the change-handler is invoked
-                          probe.flashlightServiceActive = false
-                          probe.flashlightServiceActive = result
-                      },
-                      function() {
-                          // assume true in failed case, to ensure we turn it off
-                          probe.flashlightServiceActive = false
-                          probe.flashlightServiceActive = true
-                      })
-        }
-    }
-
-    Loader { id: flashlightComponentLoader }
-
-    Component {
-        id: flashlightComponent
-
-        DBusInterface {
-            id: flashlightDbus
-
-            bus: DBusInterface.SessionBus
-            service: "com.jolla.settings.system.flashlight"
-            path: "/com/jolla/settings/system/flashlight"
-            iface: "com.jolla.settings.system.flashlight"
-            Component.onCompleted: toggleFlashlight()
-            function toggleFlashlight() {
-                var isOn = flashlightDbus.getProperty("flashlightOn")
-                if (isOn) flashlightDbus.call("toggleFlashlight")
-            }
         }
     }
 
