@@ -196,7 +196,6 @@ Page {
         }
     }
 
-
     DisabledByMdmView {
         //% "Camera"
         activity: qsTrId("sailfish_browser-la-camera");

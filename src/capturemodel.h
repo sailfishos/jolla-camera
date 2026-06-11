@@ -61,10 +61,12 @@ signals:
 private:
     struct Capture
     {
-        bool operator ==(const Capture &other) const {
+        bool operator ==(const Capture &other) const
+        {
             return directory == other.directory && fileName == other.fileName;
         }
-        bool operator !=(const Capture &other) const {
+        bool operator !=(const Capture &other) const
+        {
             return directory != other.directory || fileName != other.fileName;
         }
 

@@ -392,8 +392,6 @@ PinchArea {
         }
 
         Rectangle {
-            id: highlight
-
             anchors.fill: parent
             visible: overlay._exposed
             color: "black"
@@ -451,8 +449,6 @@ PinchArea {
             }
 
             SettingsMenu {
-                id: timerMenu
-
                 width: overlay._menuWidth
                 title: Settings.timerText
                 header: upperHeader
