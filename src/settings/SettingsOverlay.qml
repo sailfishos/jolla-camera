@@ -428,13 +428,14 @@ PinchArea {
 
                 width: colorFilterMenu.width
                 height: colorFilterMenu.height
-                visible: colorFilterMenu.parent === colorFilterParentBegin && Settings.global.colorFiltersAllowed
+                visible: colorFilterMenu.parent === colorFilterParentBegin && colorFilterMenu.active
             }
 
             SettingsMenu {
                 id: colorFilterMenu
 
                 active: Settings.global.colorFiltersAllowed
+                        && colorFilter.supportedFilters.length > 1
                 parent: grid.count > grid.columns ? colorFilterParentEnd : colorFilterParentBegin
                 width: overlay._menuWidth
                 title: Settings.colorFiltersEnabledText
@@ -568,7 +569,7 @@ PinchArea {
         Item {
             height: 1
             width: overlay._menuWidth
-            visible: colorFilterMenu.parent === colorFilterParentBegin && Settings.global.colorFiltersAllowed
+            visible: colorFilterMenu.parent === colorFilterParentBegin && colorFilterMenu.active
         }
 
         Item {
@@ -714,29 +715,19 @@ PinchArea {
             CameraImageProcessing.ColorFilterSepia, CameraImageProcessing.ColorFilterPosterize,
             CameraImageProcessing.ColorFilterWhiteboard, CameraImageProcessing.ColorFilterBlackboard
         ]
-
-        function update() {
-            if (!moving && !orientationTransitionRunning) {
-                camera.imageProcessing.colorFilter = colorFilter.model[colorFilter.currentIndex]
-            }
-        }
-
-        onReadyChanged: {
-            if (ready) {
-                var filters = []
-                var supportedFilters = CameraConfigs.supportedColorFilters
-                for (var i = 0; i < supportedFilters.length; i++) {
-                    var filter = supportedFilters[i]
-                    if (allowedFilters.indexOf(filter) >= 0) {
-                        filters.push(filter)
-                    }
+        property var supportedFilters: {
+            var filters = []
+            var supportedFilters = CameraConfigs.supportedColorFilters
+            for (var i = 0; i < supportedFilters.length; i++) {
+                var filter = supportedFilters[i]
+                if (allowedFilters.indexOf(filter) >= 0) {
+                    filters.push(filter)
                 }
-                model = filters
             }
+            return filters
         }
-        onCurrentIndexChanged: update()
-        onMovingChanged: update()
 
+        model: ready ? supportedFilters : undefined
         anchors.bottom: parent.bottom
         orientationTransitionRunning: overlay.orientationTransitionRunning
         x: overlay.isPortrait ? 0 : exposureSlider.width + Theme.paddingMedium
@@ -755,6 +746,15 @@ PinchArea {
 
         height: overlay.isPortrait ? Screen.height/11 : Theme.itemSizeMedium
         enabled: !overlay._exposed && Settings.global.colorFiltersEnabled
+
+        onCurrentIndexChanged: update()
+        onMovingChanged: update()
+
+        function update() {
+            if (!moving && !orientationTransitionRunning) {
+                camera.imageProcessing.colorFilter = colorFilter.model[colorFilter.currentIndex]
+            }
+        }
     }
 
     OpacityRampEffect {
