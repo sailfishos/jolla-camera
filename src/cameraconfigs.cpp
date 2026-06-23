@@ -76,8 +76,21 @@ void CameraConfigs::handleStatus()
             if (captures.count() > 0) {
                 QCameraImageCapture *capture = captures[0];
                 m_supportedImageResolutions.clear();
+
+                QSize maxImageResolution;
+                QVariant value(MDConfItem("/apps/jolla-camera/maxImageResolution").value());
+                if (!value.isNull()) {
+                    QStringList values = value.toString().split('x');
+                    if (values.size() == 2) {
+                        maxImageResolution = QSize(values.at(0).toInt(), values.at(1).toInt());
+                    }
+                }
+
                 for (const QSize resolution : capture->supportedResolutions()) {
-                    m_supportedImageResolutions.append(resolution);
+                    if (!maxImageResolution.isValid() || (resolution.height() <= maxImageResolution.height()
+                                                          && resolution.width() <= maxImageResolution.width())) {
+                        m_supportedImageResolutions.append(resolution);
+                    }
                 }
             }
 
