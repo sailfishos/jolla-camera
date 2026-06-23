@@ -37,8 +37,7 @@ qml.files = *.qml cover pages
 service.files = com.jolla.camera.service
 service.path  = /usr/share/dbus-1/services
 
-oneshot.files = camera-enable-hints \
-        camera-reset-deprecated-dconfvalues
+oneshot.files = camera-enable-hints
 oneshot.path  = /usr/lib/oneshot.d
 
 schema.files = dconf/00-jolla-camera.txt
