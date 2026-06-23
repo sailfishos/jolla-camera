@@ -178,9 +178,9 @@ FocusScope {
     function _pickViewfinderResolution(resolutions, aspectRatio) {
         var ratio
         if (aspectRatio === CameraConfigs.AspectRatio_16_9) {
-            ratio = 16.0/9.0
+            ratio = 16.0 / 9.0
         } else { // CameraConfigs.AspectRatio_4_3
-            ratio = 4.0/3.0
+            ratio = 4.0 / 3.0
         }
 
         if (resolutions && resolutions.length > 0) {
@@ -199,9 +199,9 @@ FocusScope {
     }
 
     function aspectRatioToFraction(aspectRatio) {
-        var ratio = 4.0/3.0
+        var ratio = 4.0 / 3.0
         if (aspectRatio === CameraConfigs.AspectRatio_16_9) {
-            ratio = 16.0/9.0
+            ratio = 16.0 / 9.0
         } else if (aspectRatio !== CameraConfigs.AspectRatio_4_3) {
             console.warn("Unknown aspect ratio", aspectRatio)
         }
@@ -217,7 +217,8 @@ FocusScope {
             for (var i = 0; i < resolutions.length; i++) {
                 var resolution = resolutions[i]
                 var pixels = resolution.width * resolution.height
-                if (Math.abs(ratio - resolution.width/resolution.height) < 0.05 && pixels > selectedPixels) {
+
+                if (Math.abs(ratio - resolution.width / resolution.height) < 0.05 && pixels > selectedPixels) {
                     selectedPixels = pixels
                     selectedIndex = i
                 }

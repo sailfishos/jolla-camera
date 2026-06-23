@@ -50,6 +50,7 @@ CoverBackground {
         delegate: Item {
             width: list.width
             height: list.height
+
             Thumbnail {
                 source: model.url
                 mimeType: model.mimeType
