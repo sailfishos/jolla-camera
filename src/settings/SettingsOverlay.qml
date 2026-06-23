@@ -190,6 +190,11 @@ PinchArea {
     ToggleButton {
         parent: _overlayPosition.cameraPosition
         anchors.centerIn: parent
+        icon: "image://theme/icon-camera-switch"
+        opacity: _commonControlOpacity
+        visible: opacity > 0.0 && camera.hasCameraOnBothSides
+        enabled: overlay.deviceToggleEnabled
+
         onClicked: {
             if (Settings.global.position === Camera.BackFace) {
                 Settings.deviceId = Settings.global.frontFacingDeviceId
@@ -199,11 +204,6 @@ PinchArea {
 
             camera.digitalZoom = 1.0
         }
-
-        icon: "image://theme/icon-camera-switch"
-        opacity: _commonControlOpacity
-        visible: opacity > 0.0 && camera.hasCameraOnBothSides
-        enabled: overlay.deviceToggleEnabled
     }
 
     CaptureModeMenu {
@@ -681,10 +681,11 @@ PinchArea {
     }
 
     Item {
-        parent: _overlayPosition.exposure === Qt.AlignRight ? overlayAnchorBL : overlayAnchorBR
         property int paddingVector: overlay.isPortrait
                                     ? -2
                                     : _overlayPosition.exposure === Qt.AlignRight ? 2 : -2
+
+        parent: _overlayPosition.exposure === Qt.AlignRight ? overlayAnchorBL : overlayAnchorBR
         anchors {
             centerIn: parent
             verticalCenterOffset: overlay.isPortrait ? overlayAnchorBL.width*paddingVector : 0

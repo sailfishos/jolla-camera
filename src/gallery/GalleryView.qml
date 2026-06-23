@@ -5,10 +5,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 import QtQuick 2.1
+import QtMultimedia 5.0
 import Sailfish.Silica 1.0
 import Sailfish.Silica.private 1.0 as Private
 import Sailfish.Gallery 1.0
-import QtMultimedia 5.0
 import com.jolla.camera 1.0
 import ".."
 
