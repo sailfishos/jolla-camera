@@ -114,7 +114,7 @@ fi
 %{_datadir}/translations/jolla-camera_eng_en.qm
 %{_datadir}/dbus-1/services/com.jolla.camera.service
 %{_libdir}/qt5/qml/com/jolla/camera
-%{_sysconfdir}/dconf/db/vendor.d/jolla-camera.txt
+%{_sysconfdir}/dconf/db/vendor.d/00-jolla-camera.txt
 %{_oneshotdir}/camera-enable-hints
 %{_oneshotdir}/camera-reset-deprecated-dconfvalues
 %{_userunitdir}/user-session.target.d/50-jolla-camera.conf
