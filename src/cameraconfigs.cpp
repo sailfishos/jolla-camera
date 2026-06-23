@@ -6,6 +6,7 @@
 #include "cameraconfigs.h"
 
 #include <QCamera>
+#include <QCameraInfo>
 #include <QMediaRecorder>
 #include <QCameraImageCapture>
 #include <mdconfitem.h>
@@ -147,7 +148,23 @@ void CameraConfigs::handleStatus()
                                  QCameraImageProcessing::staticMetaObject, isWhiteBalanceModeSupported);
 
             auto isExposureModeSupported = [this](int mode) {
-                return m_camera->exposure()->isExposureModeSupported(static_cast<QCameraExposure::ExposureMode>(mode));
+                if (m_camera->captureMode() == QCamera::CaptureVideo) {
+                    return false;
+                }
+                QCameraInfo cameraInfo(*m_camera);
+                QVariant value;
+                if (cameraInfo.position() == QCamera::FrontFace) {
+                    value = MDConfItem("/apps/jolla-camera/secondary/image/exposureModeValues").value();
+                } else {
+                    value = MDConfItem("/apps/jolla-camera/primary/image/exposureModeValues").value();
+                }
+                if (!value.isNull()) {
+                    QList<QVariant> values = value.toList();
+                    if (values.contains(mode)) {
+                        return m_camera->exposure()->isExposureModeSupported(static_cast<QCameraExposure::ExposureMode>(mode));
+                    }
+                }
+                return false;
             };
             updateSupportedModes(&m_supportedExposureModes, QLatin1String("ExposureMode"),
                                  QCameraExposure::staticMetaObject, isExposureModeSupported);
