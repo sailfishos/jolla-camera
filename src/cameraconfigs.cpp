@@ -6,6 +6,7 @@
 #include "cameraconfigs.h"
 
 #include <QCamera>
+#include <QCameraInfo>
 #include <QMediaRecorder>
 #include <QCameraImageCapture>
 #include <mdconfitem.h>
@@ -76,8 +77,21 @@ void CameraConfigs::handleStatus()
             if (captures.count() > 0) {
                 QCameraImageCapture *capture = captures[0];
                 m_supportedImageResolutions.clear();
+
+                QSize maxImageResolution;
+                QVariant value(MDConfItem("/apps/jolla-camera/maxImageResolution").value());
+                if (!value.isNull()) {
+                    QStringList values = value.toString().split('x');
+                    if (values.size() == 2) {
+                        maxImageResolution = QSize(values.at(0).toInt(), values.at(1).toInt());
+                    }
+                }
+
                 for (const QSize resolution : capture->supportedResolutions()) {
-                    m_supportedImageResolutions.append(resolution);
+                    if (!maxImageResolution.isValid() || (resolution.height() <= maxImageResolution.height()
+                                                          && resolution.width() <= maxImageResolution.width())) {
+                        m_supportedImageResolutions.append(resolution);
+                    }
                 }
             }
 
@@ -134,7 +148,23 @@ void CameraConfigs::handleStatus()
                                  QCameraImageProcessing::staticMetaObject, isWhiteBalanceModeSupported);
 
             auto isExposureModeSupported = [this](int mode) {
-                return m_camera->exposure()->isExposureModeSupported(static_cast<QCameraExposure::ExposureMode>(mode));
+                if (m_camera->captureMode() == QCamera::CaptureVideo) {
+                    return false;
+                }
+                QCameraInfo cameraInfo(*m_camera);
+                QVariant value;
+                if (cameraInfo.position() == QCamera::FrontFace) {
+                    value = MDConfItem("/apps/jolla-camera/secondary/image/exposureModeValues").value();
+                } else {
+                    value = MDConfItem("/apps/jolla-camera/primary/image/exposureModeValues").value();
+                }
+                if (!value.isNull()) {
+                    QList<QVariant> values = value.toList();
+                    if (values.contains(mode)) {
+                        return m_camera->exposure()->isExposureModeSupported(static_cast<QCameraExposure::ExposureMode>(mode));
+                    }
+                }
+                return false;
             };
             updateSupportedModes(&m_supportedExposureModes, QLatin1String("ExposureMode"),
                                  QCameraExposure::staticMetaObject, isExposureModeSupported);

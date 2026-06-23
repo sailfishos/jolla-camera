@@ -20,7 +20,7 @@ OTHER_FILES += \
         pages/*.qml \
         pages/gallery/*.qml \
         dconf/*.qml \
-        dconf/jolla-camera.txt
+        dconf/00-jolla-camera.txt
 
 target.path = $$TARGETPATH
 
@@ -42,7 +42,7 @@ oneshot.files = camera-enable-hints \
         camera-reset-deprecated-dconfvalues
 oneshot.path  = /usr/lib/oneshot.d
 
-schema.files = dconf/jolla-camera.txt
+schema.files = dconf/00-jolla-camera.txt
 schema.path  = /etc/dconf/db/vendor.d/
 
 INSTALLS += target desktop qml service schema oneshot
