@@ -167,6 +167,7 @@ PinchArea {
         orientation: overlay.isPortrait ? Qt.Horizontal : Qt.Vertical
         enabled: camera.cameraStatus === Camera.ActiveStatus
         model: camera.backFacingCameras
+        currentDeviceId: camera.deviceId
 
         x: {
             if (_overlayPosition.backCameraToggle === Qt.AlignLeft) {
