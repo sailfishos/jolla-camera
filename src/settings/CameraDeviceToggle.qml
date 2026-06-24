@@ -10,6 +10,7 @@ import com.jolla.camera 1.0
 Grid {
     id: root
 
+    property string currentDeviceId
     property var labels: []
     property alias model: repeater.model
     property int orientation: Qt.Vertical
@@ -33,7 +34,7 @@ Grid {
         id: repeater
 
         SilicaItem {
-            highlighted: mouseArea.pressed && mouseArea.containsMouse || modelData.deviceId === Settings.deviceId
+            highlighted: mouseArea.pressed && mouseArea.containsMouse || modelData.deviceId === root.currentDeviceId
             width: Theme.itemSizeExtraSmall
             height: Theme.itemSizeExtraSmall
             visible: cameraLabel.text != ''
@@ -43,7 +44,7 @@ Grid {
 
                 anchors.fill: parent
                 onClicked: {
-                    if (modelData.deviceId !== Settings.deviceId) {
+                    if (modelData.deviceId !== root.currentDeviceId) {
                         root.selected(modelData.deviceId)
                     }
                 }

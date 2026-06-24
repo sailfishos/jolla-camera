@@ -6,13 +6,13 @@
 
 import QtQuick 2.4
 import QtMultimedia 5.4
-import Sailfish.Silica 1.0
-import Sailfish.Policy 1.0
-import com.jolla.camera 1.0
 import Nemo.Policy 1.0
 import Nemo.Ngf 1.0
 import Nemo.Notifications 1.0
 import org.nemomobile.systemsettings 1.0
+import Sailfish.Silica 1.0
+import Sailfish.Policy 1.0
+import com.jolla.camera 1.0
 
 import "../settings"
 
@@ -484,6 +484,7 @@ FocusScope {
                                    && (camera.errorCode === Camera.CameraError
                                        || (camera.cameraState === Camera.UnloadedState
                                            && camera.cameraStatus === Camera.UnloadedStatus))
+        property bool initialized
 
         Component.onCompleted: reloadCheckEnabled = true
 
@@ -528,7 +529,6 @@ FocusScope {
                 captureView.loaded()
             }
         }
-        property bool initialized
 
         onCameraStatusChanged: {
             if (camera.cameraStatus === Camera.ActiveStatus) {

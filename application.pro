@@ -19,7 +19,6 @@ OTHER_FILES += \
         pages \
         pages/*.qml \
         pages/gallery/*.qml \
-        dconf/*.qml \
         dconf/00-jolla-camera.txt
 
 target.path = $$TARGETPATH
@@ -33,13 +32,12 @@ desktop.files = \
 DEPLOYMENT_PATH = /usr/share/$$TARGET
 DEFINES *= DEPLOYMENT_PATH=\"\\\"\"$${DEPLOYMENT_PATH}/\"\\\"\"
 qml.path = $$DEPLOYMENT_PATH
-qml.files = *.qml cover pages gconf
+qml.files = *.qml cover pages
 
 service.files = com.jolla.camera.service
 service.path  = /usr/share/dbus-1/services
 
-oneshot.files = camera-enable-hints \
-        camera-reset-deprecated-dconfvalues
+oneshot.files = camera-enable-hints
 oneshot.path  = /usr/lib/oneshot.d
 
 schema.files = dconf/00-jolla-camera.txt

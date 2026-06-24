@@ -96,9 +96,6 @@ chmod +x %{buildroot}/%{_oneshotdir}/*
 %post
 %{_bindir}/add-oneshot dconf-update || :
 %{_bindir}/add-oneshot --new-users camera-enable-hints || :
-if [ "$1" -eq 2 ]; then
-%{_bindir}/add-oneshot --user camera-reset-deprecated-dconfvalues || :
-fi
 
 %files
 %license LICENSES/BSD-3-Clause.txt
@@ -116,7 +113,6 @@ fi
 %{_libdir}/qt5/qml/com/jolla/camera
 %{_sysconfdir}/dconf/db/vendor.d/00-jolla-camera.txt
 %{_oneshotdir}/camera-enable-hints
-%{_oneshotdir}/camera-reset-deprecated-dconfvalues
 %{_userunitdir}/user-session.target.d/50-jolla-camera.conf
 %{_bindir}/jolla-camera-lockscreen
 %{_datadir}/applications/jolla-camera-lockscreen.desktop
