@@ -44,9 +44,7 @@ Grid {
 
                 anchors.fill: parent
                 onClicked: {
-                    if (modelData.deviceId !== root.currentDeviceId) {
-                        root.selected(modelData.deviceId)
-                    }
+                    root.selected(modelData.deviceId)
                 }
             }
 
