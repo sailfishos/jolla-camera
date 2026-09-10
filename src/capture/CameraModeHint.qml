@@ -34,6 +34,11 @@ Loader {
                 alwaysRunToEnd: true
                 distance: Theme.itemSizeMedium
                 color: Theme.lightPrimaryColor
+                onRunningChanged: {
+                    if (!running) {
+                        counter.increase()
+                    }
+                }
 
                 Component.onCompleted: restart()
             }
@@ -42,8 +47,7 @@ Loader {
     FirstTimeUseCounter {
         id: counter
 
-        limit: 3
-        defaultValue: 1 // display hint twice for existing users
+        limit: 2
         key: "/sailfish/camera/camera_mode_hint_count"
     }
 }
