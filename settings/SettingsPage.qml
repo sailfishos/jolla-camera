@@ -9,7 +9,6 @@ import com.jolla.camera 1.0
 import Nemo.Configuration 1.0
 import org.nemomobile.systemsettings 1.0
 import Sailfish.Silica 1.0
-import Sailfish.Policy 1.0
 import com.jolla.settings 1.0
 import com.jolla.settings.system 1.0
 
@@ -44,10 +43,6 @@ ApplicationSettings {
 
     LocationSettings { id: locationSettings }
 
-    DisabledByMdmBanner {
-        active: !AccessPolicy.cameraEnabled
-    }
-
     IconTextSwitch {
         automaticCheck: false
         icon.source: "image://theme/icon-m-gps"
@@ -56,7 +51,6 @@ ApplicationSettings {
         text: qsTrId("camera_settings-la-save_location")
         //% "Save current GPS coordinates in captured photos."
         description: qsTrId("camera_settings-la-save_location_description")
-        enabled: AccessPolicy.cameraEnabled
         checked: Settings.global.saveLocationInfo
         onClicked: Settings.global.saveLocationInfo = !Settings.global.saveLocationInfo
     }
@@ -68,7 +62,6 @@ ApplicationSettings {
         text: qsTrId("camera_settings-la-enable_qr")
         //% "Detect QR-code via camera."
         description: qsTrId("camera_settings-la-detect_qr_description")
-        enabled: AccessPolicy.cameraEnabled
         checked: Settings.global.qrFilterEnabled
         onClicked: Settings.global.qrFilterEnabled = !Settings.global.qrFilterEnabled
     }
@@ -111,7 +104,6 @@ ApplicationSettings {
 
         //% "Storage"
         label: qsTrId("camera_settings-cb-storage")
-        enabled: AccessPolicy.cameraEnabled
         menu: ContextMenu {
             MenuItem {
                 property string mountPath: ""
@@ -164,13 +156,11 @@ ApplicationSettings {
     SectionHeader {
         //% "Back camera"
         text: qsTrId("camera-ph-back-camera")
-        opacity: AccessPolicy.cameraEnabled ? 1.0 : Theme.opacityLow
     }
 
     ComboBox {
         //% "Aspect ratio"
         label: qsTrId("camera_settings-la-aspect_ratio")
-        enabled: AccessPolicy.cameraEnabled
         currentIndex: backCameraAspectRatio.value
 
         menu: ContextMenu {
@@ -188,13 +178,11 @@ ApplicationSettings {
     SectionHeader {
         //% "Front camera"
         text: qsTrId("camera-he-front-camera")
-        opacity: AccessPolicy.cameraEnabled ? 1.0 : Theme.opacityLow
     }
 
     ComboBox {
         //% "Aspect ratio"
         label: qsTrId("camera_settings-la-aspect_ratio")
-        enabled: AccessPolicy.cameraEnabled
         currentIndex: frontCameraAspectRatio.value
         menu: ContextMenu {
             MenuItem {
