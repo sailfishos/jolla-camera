@@ -77,6 +77,7 @@ void CameraConfigs::handleStatus()
             if (captures.count() > 0) {
                 QCameraImageCapture *capture = captures[0];
                 m_supportedImageResolutions.clear();
+                m_supportedHighresImageResolutions.clear();
 
                 QSize maxImageResolution;
                 QVariant value(MDConfItem("/apps/jolla-camera/maxImageResolution").value());
@@ -91,6 +92,8 @@ void CameraConfigs::handleStatus()
                     if (!maxImageResolution.isValid() || (resolution.height() <= maxImageResolution.height()
                                                           && resolution.width() <= maxImageResolution.width())) {
                         m_supportedImageResolutions.append(resolution);
+                    } else {
+                        m_supportedHighresImageResolutions.append(resolution);
                     }
                 }
             }
@@ -218,6 +221,7 @@ void CameraConfigs::handleStatus()
         if (m_ready) {
             emit supportedViewfinderResolutionsChanged();
             emit supportedImageResolutionsChanged();
+            emit supportedHighresImageResolutionsChanged();
             emit supportedVideoResolutionsChanged();
             emit supportedIsoSensitivitiesChanged();
             emit supportedWhiteBalanceModesChanged();
@@ -240,6 +244,11 @@ QVariantList CameraConfigs::supportedViewfinderResolutions() const
 QVariantList CameraConfigs::supportedImageResolutions() const
 {
     return m_supportedImageResolutions;
+}
+
+QVariantList CameraConfigs::supportedHighresImageResolutions() const
+{
+    return m_supportedHighresImageResolutions;
 }
 
 QVariantList CameraConfigs::supportedVideoResolutions() const

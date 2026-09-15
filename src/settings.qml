@@ -97,6 +97,7 @@ SettingsBase {
             property int meteringMode: Camera.MeteringMatrix
             property int timer: 0
             property int aspectRatio: -1
+            property bool enableHighres
 
             Component.onCompleted: {
                 if (aspectRatio === -1) {

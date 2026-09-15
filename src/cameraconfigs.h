@@ -27,6 +27,7 @@ class CameraConfigs : public QObject
     // TODO: Replace QVariantList here with QList<QSize> on newer Qt
     Q_PROPERTY(QVariantList supportedViewfinderResolutions READ supportedViewfinderResolutions NOTIFY supportedViewfinderResolutionsChanged)
     Q_PROPERTY(QVariantList supportedImageResolutions READ supportedImageResolutions NOTIFY supportedImageResolutionsChanged)
+    Q_PROPERTY(QVariantList supportedHighresImageResolutions READ supportedHighresImageResolutions NOTIFY supportedHighresImageResolutionsChanged)
     Q_PROPERTY(QVariantList supportedVideoResolutions READ supportedVideoResolutions NOTIFY supportedVideoResolutionsChanged)
     Q_PROPERTY(QVariantList supportedIsoSensitivities READ supportedIsoSensitivities NOTIFY supportedIsoSensitivitiesChanged)
     Q_PROPERTY(QVariantList supportedWhiteBalanceModes READ supportedWhiteBalanceModes NOTIFY supportedWhiteBalanceModesChanged)
@@ -52,6 +53,7 @@ public:
 
     QVariantList supportedViewfinderResolutions() const;
     QVariantList supportedImageResolutions() const;
+    QVariantList supportedHighresImageResolutions() const;
     QVariantList supportedVideoResolutions() const;
     QVariantList supportedIsoSensitivities() const;
     QVariantList supportedWhiteBalanceModes() const;
@@ -72,6 +74,7 @@ signals:
     void readyChanged();
     void supportedViewfinderResolutionsChanged();
     void supportedImageResolutionsChanged();
+    void supportedHighresImageResolutionsChanged();
     void supportedVideoResolutionsChanged();
     void supportedIsoSensitivitiesChanged();
     void supportedWhiteBalanceModesChanged();
@@ -93,6 +96,7 @@ private:
     QObject *m_qmlCamera = nullptr;
     QVariantList m_supportedViewfinderResolutions;
     QVariantList m_supportedImageResolutions;
+    QVariantList m_supportedHighresImageResolutions;
     QVariantList m_supportedVideoResolutions;
     QVariantList m_supportedIsoSensitivities;
     QVariantList m_supportedWhiteBalanceModes;
