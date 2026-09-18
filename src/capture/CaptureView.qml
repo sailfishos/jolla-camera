@@ -392,17 +392,6 @@ FocusScope {
         }
     }
 
-    Connections {
-        target: CameraConfigs
-        onReadyChanged: {
-            // Reset flash torch mode if it's not supported
-            if (camera.captureMode === Camera.CaptureVideo
-                    && CameraConfigs.supportedFlashModes.indexOf(Settings.mode.flash) === -1) {
-                Settings.mode.flash = Camera.FlashOff
-            }
-        }
-    }
-
     Camera {
         id: camera
 
@@ -676,6 +665,17 @@ FocusScope {
             if (lockStatus != Camera.Searching && captureView._captureOnFocus) {
                 captureView._captureOnFocus = false
                 camera._completeCapture()
+            }
+        }
+    }
+
+    Connections {
+        target: CameraConfigs
+        onReadyChanged: {
+            // Reset flash torch mode if it's not supported
+            if (camera.captureMode === Camera.CaptureVideo
+                    && CameraConfigs.supportedFlashModes.indexOf(Settings.mode.flash) === -1) {
+                Settings.mode.flash = Camera.FlashOff
             }
         }
     }
