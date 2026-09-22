@@ -73,7 +73,7 @@ SettingsBase {
 
         property bool saveLocationInfo
 
-        property bool qrFilterEnabled: false
+        property bool qrFilterEnabled: true
         property bool colorFiltersEnabled: false
         property bool colorFiltersAllowed: true
 
