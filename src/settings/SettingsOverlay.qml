@@ -660,7 +660,8 @@ PinchArea {
             // since there is no app background. using the common components with the lack of alternatives
             IconTextSwitch {
                 visible: CameraConfigs.supportedHighresImageResolutions.length > 0 && Settings.global.captureMode === "image"
-                icon.source: "image://theme/icon-m-imaging?" + (pressed ? _highlightColor : Theme.lightPrimaryColor)
+                palette.colorScheme: Theme.LightOnDark
+                icon.source: "image://theme/icon-m-imaging"
                 //% "High resolution mode"
                 text: qsTrId("camera-la-high_res_capture")
                 automaticCheck: false
@@ -672,7 +673,8 @@ PinchArea {
                 // we currently do QR only on back camera
                 visible: Settings.global.captureMode === "image"
                          && Settings.global.position === Camera.BackFace
-                icon.source: "image://theme/icon-m-qr?" + (pressed ? _highlightColor : Theme.lightPrimaryColor)
+                palette.colorScheme: Theme.LightOnDark
+                icon.source: "image://theme/icon-m-qr"
                 //% "Enable QR-code recognition"
                 text: qsTrId("camera-la-enable_qr")
                 automaticCheck: false
