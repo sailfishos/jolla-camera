@@ -3,7 +3,7 @@
 //
 // SPDX-License-Identifier: BSD-3-Clause
 
-import QtQuick 2.4
+import QtQuick 2.6
 import QtMultimedia 5.6
 import Sailfish.Silica 1.0
 import com.jolla.camera 1.0
@@ -329,6 +329,7 @@ PinchArea {
 
             MouseArea {
                 anchors.horizontalCenter: parent.horizontalCenter
+                anchors.horizontalCenterOffset: grid.anchors.horizontalCenterOffset
                 width: grid.width
                 height: Math.max(Theme.itemSizeLarge, topRow._topRowMargin + Theme.iconSizeMedium)
                 enabled: !overlay._exposed && !overlay.inButtonLayout && showCommonControls
@@ -414,6 +415,7 @@ PinchArea {
             y: Math.round(height * panel.y / panel.height) + overlay._headerHeight + overlay._headerTopMargin
             height: Math.max(implicitHeight, Screen.height / 2)
             anchors.horizontalCenter: parent.horizontalCenter
+            anchors.horizontalCenterOffset: overlay.isPortrait ? 0 : ((-width / 2) - Theme.paddingLarge)
 
             opacity: 1 - container.opacity
             enabled: overlay._exposed
@@ -558,6 +560,7 @@ PinchArea {
                                               ? (Screen.topCutout.height + Theme.paddingSmall) : 0)
 
         anchors.horizontalCenter: parent.horizontalCenter
+        anchors.horizontalCenterOffset: grid.anchors.horizontalCenterOffset
         spacing: grid.spacing
         opacity: _commonControlOpacity
         visible: opacity > 0.0
@@ -615,10 +618,12 @@ PinchArea {
     }
 
     Item {
-        width: parent.width
-        opacity: grid.opacity
+        // have this appear somewhat late when dragging
+        opacity: Math.max(0, (overlay._progress - 0.75)) * 4
         visible: overlay._exposed
-        anchors.bottom: parent.bottom
+        anchors.fill: parent
+        anchors.leftMargin: page.orientation == Orientation.Landscape ? Screen.topCutout.height : 0
+        anchors.rightMargin: page.orientation == Orientation.LandscapeInverted ? Screen.topCutout.height : 0
 
         CameraButton {
             background.visible: false
@@ -628,10 +633,10 @@ PinchArea {
 
             width: Theme.itemSizeMedium
             height: Theme.itemSizeMedium
-            anchors {
-                right: parent.right
-                bottom: parent.bottom
-            }
+            anchors.bottom: overlay.isPortrait ? extraConfig.top : parent.bottom
+            anchors.bottomMargin: Theme.paddingLarge
+            x: overlay.isPortrait ? parent.width - width
+                                  : Theme.horizontalPageMargin
 
             icon {
                 opacity: pressed ? Theme.opacityLow : 1.0
@@ -641,6 +646,47 @@ PinchArea {
             onClicked: {
                 upperHeader.pressedMenu = null
                 Settings.reset()
+            }
+        }
+
+        Column {
+            id: extraConfig
+
+            width: overlay.isPortrait ? Screen.width : Screen.height / 2
+            anchors.bottom: parent.bottom
+            anchors.right: parent.right
+
+            // to consider: the switch graphics shouldn't necessarily be here "light behind a transparent pattern"
+            // since there is no app background. using the common components with the lack of alternatives
+            IconTextSwitch {
+                visible: CameraConfigs.supportedHighresImageResolutions.length > 0 && Settings.global.captureMode === "image"
+                palette.colorScheme: Theme.LightOnDark
+                icon.source: "image://theme/icon-m-imaging"
+                //% "High resolution mode"
+                text: qsTrId("camera-la-high_res_capture")
+                automaticCheck: false
+                checked: Settings.mode.enableHighres
+                onClicked: Settings.mode.enableHighres = !Settings.mode.enableHighres
+            }
+
+            IconTextSwitch {
+                // we currently do QR only on back camera
+                visible: Settings.global.captureMode === "image"
+                         && Settings.global.position === Camera.BackFace
+                palette.colorScheme: Theme.LightOnDark
+                icon.source: "image://theme/icon-m-qr"
+                //% "Enable QR-code recognition"
+                text: qsTrId("camera-la-enable_qr")
+                automaticCheck: false
+                checked: Settings.global.qrFilterEnabled
+                onClicked: Settings.global.qrFilterEnabled = !Settings.global.qrFilterEnabled
+            }
+
+            // explicit padding item seems to work better than Column:bottomPadding.
+            // if all the content is otherwise visible: false, the column height has some problems updating
+            Item {
+                width: 1
+                height: Theme.itemSizeSmall
             }
         }
     }

@@ -174,7 +174,6 @@ FocusScope {
         }
     }
 
-
     function _pickViewfinderResolution(resolutions, aspectRatio) {
         var ratio
         if (aspectRatio === CameraConfigs.AspectRatio_16_9) {
@@ -199,6 +198,10 @@ FocusScope {
     }
 
     function aspectRatioToFraction(aspectRatio) {
+        if (aspectRatio < 0) {
+            return aspectRatio
+        }
+
         var ratio = 4.0 / 3.0
         if (aspectRatio === CameraConfigs.AspectRatio_16_9) {
             ratio = 16.0 / 9.0
@@ -208,6 +211,7 @@ FocusScope {
         return ratio
     }
 
+    // negative aspect ratio means ignored
     function _pickResolution(resolutions, aspectRatio) {
         var ratio = aspectRatioToFraction(aspectRatio)
 
@@ -218,7 +222,9 @@ FocusScope {
                 var resolution = resolutions[i]
                 var pixels = resolution.width * resolution.height
 
-                if (Math.abs(ratio - resolution.width / resolution.height) < 0.05 && pixels > selectedPixels) {
+                if (ratio < 0
+                        || (Math.abs(ratio - resolution.width / resolution.height) < 0.05
+                            && pixels > selectedPixels)) {
                     selectedPixels = pixels
                     selectedIndex = i
                 }
@@ -389,17 +395,6 @@ FocusScope {
     onRecordingStopped: {
         if (captureModel) {
             captureModel.appendCapture(url, mimeType)
-        }
-    }
-
-    Connections {
-        target: CameraConfigs
-        onReadyChanged: {
-            // Reset flash torch mode if it's not supported
-            if (camera.captureMode === Camera.CaptureVideo
-                    && CameraConfigs.supportedFlashModes.indexOf(Settings.mode.flash) === -1) {
-                Settings.mode.flash = Camera.FlashOff
-            }
         }
     }
 
@@ -575,7 +570,9 @@ FocusScope {
         }
 
         imageCapture {
-            resolution: _pickResolution(CameraConfigs.supportedImageResolutions, Settings.aspectRatio)
+            resolution: (Settings.mode.enableHighres && CameraConfigs.supportedHighresImageResolutions.length > 0)
+                        ? _pickResolution(CameraConfigs.supportedHighresImageResolutions, -1)
+                        : _pickResolution(CameraConfigs.supportedImageResolutions, Settings.aspectRatio)
 
             onImageSaved: {
                 // HDR case emits the exposed already on the first image, delay the feedback so user avoids
@@ -656,7 +653,13 @@ FocusScope {
             resolution: {
                 var resolutions = CameraConfigs.supportedViewfinderResolutions
                 if (resolutions.length > 0) {
-                    return _pickViewfinderResolution(resolutions, Settings.aspectRatio)
+                    // assuming high res is 4:3
+                    var aspectRatio = (Settings.mode.enableHighres
+                                       && CameraConfigs.supportedHighresImageResolutions.length > 0)
+                            ? CameraConfigs.AspectRatio_4_3
+                            : Settings.aspectRatio
+
+                    return _pickViewfinderResolution(resolutions, aspectRatio)
                 }
                 return "-1x-1"
             }
@@ -676,6 +679,17 @@ FocusScope {
             if (lockStatus != Camera.Searching && captureView._captureOnFocus) {
                 captureView._captureOnFocus = false
                 camera._completeCapture()
+            }
+        }
+    }
+
+    Connections {
+        target: CameraConfigs
+        onReadyChanged: {
+            // Reset flash torch mode if it's not supported
+            if (camera.captureMode === Camera.CaptureVideo
+                    && CameraConfigs.supportedFlashModes.indexOf(Settings.mode.flash) === -1) {
+                Settings.mode.flash = Camera.FlashOff
             }
         }
     }

@@ -73,7 +73,7 @@ SettingsBase {
 
         property bool saveLocationInfo
 
-        property bool qrFilterEnabled: false
+        property bool qrFilterEnabled: true
         property bool colorFiltersEnabled: false
         property bool colorFiltersAllowed: true
 
@@ -97,6 +97,7 @@ SettingsBase {
             property int meteringMode: Camera.MeteringMatrix
             property int timer: 0
             property int aspectRatio: -1
+            property bool enableHighres
 
             Component.onCompleted: {
                 if (aspectRatio === -1) {
