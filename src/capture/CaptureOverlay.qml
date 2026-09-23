@@ -150,7 +150,9 @@ SettingsOverlay {
         // and in that instance the active property may be reset.
         // So, initialise the property after component completion to ensure correct behaviour.
         Component.onCompleted: positionSource.active = Qt.binding(function() {
-            return captureView.effectiveActive && locationSettings.locationEnabled && Settings.global.saveLocationInfo
+            return Qt.application.state == Qt.ApplicationActive
+                    && locationSettings.locationEnabled
+                    && Settings.global.saveLocationInfo
         })
     }
 
