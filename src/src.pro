@@ -20,6 +20,7 @@ SOURCES += \
         cameraplugin.cpp \
         capturemodel.cpp \
         declarativecameraextensions.cpp \
+        dnglensshading.cpp \
         imageadjustments.cpp \
         declarativesettings.cpp \
         cameraconfigs.cpp
@@ -28,6 +29,7 @@ HEADERS += \
         camera2preview.h \
         capturemodel.h \
         declarativecameraextensions.h \
+        dnglensshading.h \
         imageadjustments.h \
         declarativesettings.h \
         cameraconfigs.h
@@ -42,7 +44,8 @@ import.files = \
         gallery \
         qmldir \
         settings \
-        settings.qml
+        settings.qml \
+        calibration
 
 import.path = $$TARGETPATH
 target.path = $$TARGETPATH

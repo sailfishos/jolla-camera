@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "declarativecameraextensions.h"
+#include "dnglensshading.h"
 #include "imageadjustments.h"
 
 #include <QDir>
@@ -36,6 +37,10 @@
 
 #ifndef TIFFTAG_NOISEPROFILE
 #define TIFFTAG_NOISEPROFILE 51041
+#endif
+
+#ifndef TIFFTAG_OPCODELIST1
+#define TIFFTAG_OPCODELIST1 51008
 #endif
 
 #include <algorithm>
@@ -904,6 +909,21 @@ bool writeTiffDng(const QString &metadataPath, const QString &dngPath,
             noiseProfile[index] = noiseProfileJson.at(index).toDouble();
         }
         TIFFSetField(tiff, TIFFTAG_NOISEPROFILE, 8, noiseProfile);
+    }
+
+    // Per-channel vignetting/color-shading correction, if a calibration was
+    // generated for this camera (see tools/calibration/generate_lens_shading.py
+    // and calibration/README.md). Silently skipped when absent or when it
+    // does not match this capture's camera/resolution/CFA.
+    const QString calibrationDir = QStringLiteral(DEPLOYMENT_PATH "calibration");
+    const QString cameraId = metadata.value(QStringLiteral("camera_id")).toString();
+    QString lensShadingWarning;
+    const QByteArray opcodeList1 = DngLensShading::buildOpcodeList1(
+            calibrationDir, cameraId, cfa, width, height, &lensShadingWarning);
+    if (!opcodeList1.isEmpty()) {
+        TIFFSetField(tiff, TIFFTAG_OPCODELIST1, opcodeList1.size(), opcodeList1.constData());
+    } else if (!lensShadingWarning.isEmpty()) {
+        qWarning() << lensShadingWarning;
     }
 
     QByteArray row(rowStride, Qt::Uninitialized);
