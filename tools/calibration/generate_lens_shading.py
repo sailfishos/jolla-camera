@@ -36,6 +36,14 @@ How it works:
        and the resulting gain grids are averaged, which reduces sensor
        noise and gives a simple sanity check (--max-disagreement reports
        how much the individual estimates differed).
+    6. --balance and --strength then re-dose the averaged gain grid before
+       it is written out (see apply_balance_and_strength()): --balance
+       trades brightening the corners for darkening the centre instead
+       (both change exposure by the same shape, just around a different
+       pivot), and --strength scales how much of the correction is baked
+       in at all. The DNG reader (src/dnglensshading.cpp) writes whatever
+       gain values are in the JSON as-is, so this is the only place that
+       dosing is controlled.
 
 The calibration is only valid for the specific camera_id, sensor resolution
 and CFA pattern it was generated from. Regenerate it whenever the RAW
@@ -158,6 +166,97 @@ def compute_gain_grid(plane, grid_rows, grid_cols, max_gain):
     return np.clip(gain, 1.0, max_gain)
 
 
+def report_clamping(averaged, grid_rows, grid_cols, max_gain):
+    """
+    Warn when the shipped (post-averaging) gain grid is sitting at the
+    --max-gain ceiling, since a clamped point is silently weaker than the
+    correction that point actually needs -- the JSON stores 4.0 either way,
+    so nothing else about the output would reveal this.
+
+    Also breaks the count down by left vs. right edge column(s), because a
+    lopsided result (e.g. the right edge clamping far more than the left)
+    almost never means "raise --max-gain": it's the signature of an
+    unevenly lit flat-field target (brighter on one side than the other),
+    which the calibration model cannot distinguish from real vignetting.
+    See calibration/README.md's guidance to retake the flat with more even
+    light rather than raising the limit.
+    """
+    edge_cols = max(1, grid_cols // 4)
+    threshold = max_gain - 1e-6
+    any_clamped = False
+    for name in PLANE_NAMES:
+        clamped = averaged[name] >= threshold
+        total = int(clamped.sum())
+        if total == 0:
+            continue
+        any_clamped = True
+        left = int(clamped[:, :edge_cols].sum())
+        right = int(clamped[:, -edge_cols:].sum())
+        pct = 100.0 * total / clamped.size
+        print(f"  {name:>2}: {total}/{clamped.size} grid points ({pct:.1f}%) "
+              f"clamped at max-gain={max_gain:g} "
+              f"(left {edge_cols} col(s): {left}, right {edge_cols} col(s): {right})")
+        if right > 2 * max(left, 1) or left > 2 * max(right, 1):
+            heavier = "right" if right > left else "left"
+            print(f"      -> heavily lopsided towards the {heavier} edge: this usually "
+                  "means the flat-field target was lit unevenly, not that --max-gain is "
+                  "too low. Retake the calibration capture with more even lighting before "
+                  "considering --max-gain (see calibration/README.md).")
+    if not any_clamped:
+        print("  none of the four planes hit max-gain: the ceiling did not limit this "
+              "calibration.")
+
+
+def apply_balance_and_strength(averaged, balance, strength):
+    """
+    Re-dose the averaged, per-plane gain grids (each value >= 1.0, 1.0 at
+    the optical centre, largest at the corners) between purely brightening
+    the corners and purely darkening the rest of the frame -- the encoder
+    side (src/dnglensshading.cpp) just writes back whatever ends up in the
+    JSON, so this is the only place that decides which of the two the
+    shipped calibration actually does.
+
+    balance (0-100) picks the pivot gain value that ends up unchanged
+    (mapped to 1.0): at 0 the pivot is 1.0, i.e. today's behaviour --
+    every point is only ever brightened up towards the map's peak gain,
+    the centre is left alone. At 100 the pivot is the single largest gain
+    value found across all four planes, so that point (the point needing
+    the *most* correction, usually a corner) is left alone and everything
+    else -- including the centre -- is only ever darkened down towards
+    it. Values in between blend the two. The same pivot is used for all
+    four planes so balance only ever shifts overall brightness and never
+    disturbs the existing R/Gr/Gb/B colour-shift correction between
+    planes.
+
+    The pivot is interpolated geometrically (pivot = global_max ** (balance
+    / 100)) rather than linearly, because these values are gains and
+    combine multiplicatively: a linear blend would move the pivot very
+    little over most of the slider and then jump near the top end, while
+    the geometric blend keeps --balance's visible effect roughly even
+    across its whole 0-100 range.
+
+    strength (0-100) then blends the re-pivoted grid back towards a flat
+    1.0 (no correction at all) in gain space, so 0 writes a no-op
+    calibration and 100 writes the full (re-pivoted) correction.
+
+    Returns a new {plane_name: ndarray} dict; does not mutate `averaged`.
+    """
+    balance = max(0.0, min(100.0, balance)) / 100.0
+    strength = max(0.0, min(100.0, strength)) / 100.0
+
+    global_max_gain = max(1.0, max(float(averaged[name].max()) for name in PLANE_NAMES))
+    pivot = global_max_gain ** balance
+
+    dosed = {}
+    for name in PLANE_NAMES:
+        rebalanced = averaged[name] / pivot
+        blended = 1.0 + strength * (rebalanced - 1.0)
+        # Defensive floor: a GainMap value must stay strictly positive for
+        # readers to make sense of it.
+        dosed[name] = np.clip(blended, 1e-3, None)
+    return dosed, pivot
+
+
 def process_file(path, grid_rows, grid_cols, max_gain, cfa_override):
     with rawpy.imread(path) as raw:
         cfa = cfa_override or detect_cfa_pattern(raw)
@@ -189,9 +288,23 @@ def main():
                          help="Gain map grid columns per plane (default: 16)")
     parser.add_argument("--max-gain", type=float, default=4.0,
                          help="Clamp on corner gain to avoid amplifying noise (default: 4.0)")
+    parser.add_argument("--balance", type=float, default=0.0,
+                         help="0-100: how much of the correction is applied by darkening "
+                              "the centre instead of only brightening the corners. 0 "
+                              "(default) matches the original, purely-additive behaviour; "
+                              "100 leaves the point needing the most correction unchanged "
+                              "and only ever darkens everything else.")
+    parser.add_argument("--strength", type=float, default=100.0,
+                         help="0-100: how much of the (--balance-dosed) correction to "
+                              "actually bake into the output. 100 (default) is the full "
+                              "correction; 0 writes a no-op calibration.")
     parser.add_argument("--cfa", choices=["RGGB", "GRBG", "GBRG", "BGGR"],
                          help="Override auto-detected CFA pattern")
     args = parser.parse_args()
+    if not 0.0 <= args.balance <= 100.0:
+        sys.exit("--balance must be between 0 and 100")
+    if not 0.0 <= args.strength <= 100.0:
+        sys.exit("--strength must be between 0 and 100")
 
     per_file_gains = []
     reference_cfa = reference_width = reference_height = None
@@ -219,6 +332,14 @@ def main():
     if len(per_file_gains) > 1:
         print(f"Max disagreement between input files: {max_disagreement:.4f} gain units")
 
+    print(f"\nClamping check (--max-gain={args.max_gain:g}):")
+    report_clamping(averaged, args.grid_rows, args.grid_cols, args.max_gain)
+
+    dosed, pivot = apply_balance_and_strength(averaged, args.balance, args.strength)
+    print(f"\nDosing (--balance={args.balance:g}, --strength={args.strength:g}): "
+          f"pivot gain={pivot:.4f} "
+          f"({'no change' if pivot <= 1.0 + 1e-9 else 'centre will be darkened'})")
+
     calibration = {
         "version": 1,
         "camera_id": args.camera_id,
@@ -228,7 +349,9 @@ def main():
         "grid_rows": args.grid_rows,
         "grid_cols": args.grid_cols,
         "max_gain": args.max_gain,
-        "planes": {name: np.round(averaged[name], 5).flatten().tolist()
+        "balance": args.balance,
+        "strength": args.strength,
+        "planes": {name: np.round(dosed[name], 5).flatten().tolist()
                    for name in PLANE_NAMES},
         "source_files": [path.split("/")[-1] for path in args.dng_files],
         "generated_at": datetime.datetime.now(datetime.timezone.utc)

@@ -32,7 +32,8 @@ itself.
 1. Mount/point the camera at a flat, evenly lit, neutral grey or white
    card filling the entire frame (out of focus is fine and often better,
    since it hides texture in the card). Avoid mixed lighting and keep the
-   card as flat as possible.
+   card as flat as possible -- an unevenly lit card is the most common
+   cause of a lopsided result (see "Diagnostics" below).
 2. Capture one or more RAW DNGs of the card with RAWfish
    (Settings -> RAW capture format -> DNG, or RAW16 + JSON + DNG).
 3. Run the generator:
@@ -51,10 +52,53 @@ itself.
    sanity check.
 4. Take a new DNG with that camera and confirm the `OpcodeList2` tag is now
    present (e.g. `exiftool -OpcodeList2 capture.dng`) and that a DNG-aware
-   viewer shows flatter corners and less color drift than before.
+   viewer shows flatter corners and less color drift than before. Or run
+   `tools/calibration/verify_gain_map.py` (see below) for a quantitative
+   check that doesn't depend on eyeballing a viewer.
 5. Repeat for every physical camera (main, ultrawide, tele, front, ...)
    exposed by the device -- each has its own lens and needs its own
    `lens_shading_camera<ID>.json`.
+
+## Diagnostics
+
+The generator prints two checks after averaging, before writing the file:
+
+* **Clamping report**: for each plane, how many of its grid points hit
+  `--max-gain` (see below), split into the leftmost vs. rightmost quarter
+  of grid columns. A result skewed heavily to one side (more than double
+  the other) almost always means the flat-field target itself was lit
+  unevenly, not that `--max-gain` is too low -- retake the flat with more
+  even light first. A real, symmetric lens falloff clamps roughly evenly
+  on both edges.
+* **Dosing summary**: the pivot gain value `--balance`/`--strength`
+  settled on (see below), and whether the frame centre will be darkened
+  as a result.
+
+## Tuning the correction: --max-gain, --balance, --strength
+
+* `--max-gain` (default 4.0) caps the gain applied at any single grid
+  point, to avoid amplifying sensor noise in very dark corners. Raise it
+  only after checking the clamping report above shows a genuinely
+  symmetric (not lopsided) clamp; otherwise fix the flat-field capture
+  instead.
+* `--balance` (0-100, default 0) trades brightening the corners for
+  darkening the centre instead. By default (0) every correction only ever
+  brightens a pixel up towards the least-vignetted part of the frame, so
+  the centre is never touched -- this is the original, purely additive
+  behaviour. At 100, the single point needing the *most* correction
+  (usually a far corner) is left unchanged and everything else, including
+  the centre, is only ever darkened down towards it. Values in between
+  blend the two, letting you keep the overall image from getting brighter
+  when the corners need a lot of correction.
+* `--strength` (0-100, default 100) blends the whole (`--balance`-dosed)
+  correction back towards a no-op: 100 is the full correction, 0 disables
+  it (a calibration file is still written, with every gain at 1.0), useful
+  for dialing back an overly strong correction without having to
+  recapture the flat-field photos.
+
+Both `--balance` and `--strength` default to the original behaviour, so
+existing calibration files and command lines are unaffected unless you
+pass them explicitly.
 
 ## Limitations
 
@@ -70,4 +114,7 @@ itself.
 * `--max-gain` (default 4.0) exists to avoid amplifying sensor noise in
   very dark corners; if the generator reports it is clamping heavily on
   your card/lighting, retake the flat with more even light rather than
-  raising the limit.
+  raising the limit (see "Diagnostics" above).
+* `tools/calibration/verify_gain_map.py` accepts multiple DNG files at
+  once (e.g. a glob of an entire capture session) and prints a per-file
+  pass/fail summary, exiting non-zero if any file did not improve.
