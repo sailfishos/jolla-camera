@@ -8,7 +8,7 @@ SPDX-License-Identifier: BSD-3-Clause
 Files here correct per-camera vignetting (corner darkening) and the
 associated color shift (red/blue falloff faster or slower than green) when
 saving RAW captures as DNG. The correction is written into the DNG itself as
-a standard `OpcodeList1` / `GainMap` opcode (see DNG spec >= 1.3), so it is
+a standard `OpcodeList2` / `GainMap` opcode (see DNG spec >= 1.3), so it is
 applied automatically by any DNG-aware raw processor (Lightroom, darktable,
 RawTherapee, etc.) -- RAWfish does not need to do any pixel processing
 itself.
@@ -18,7 +18,7 @@ itself.
 * `lens_shading_camera<ID>.json` holds, for the Camera2 camera whose id is
   `<ID>`, a coarse per-CFA-channel (R, Gr, Gb, B) gain grid computed from
   photos of a flat, evenly lit, neutral grey/white target.
-* `DngLensShading::buildOpcodeList1()` (`src/dnglensshading.cpp`) turns that
+* `DngLensShading::buildOpcodeList2()` (`src/dnglensshading.cpp`) turns that
   grid into the DNG `GainMap` opcodes and `writeTiffDng()`
   (`src/declarativecameraextensions.cpp`) attaches them to every DNG saved
   for that camera, as long as the capture's resolution and CFA pattern still
@@ -49,8 +49,8 @@ itself.
    Passing more than one capture reduces sensor noise in the calibration and
    the tool reports how much the independent estimates disagreed, as a
    sanity check.
-4. Take a new DNG with that camera and confirm the `OpcodeList1` tag is now
-   present (e.g. `exiftool -OpcodeList1 capture.dng`) and that a DNG-aware
+4. Take a new DNG with that camera and confirm the `OpcodeList2` tag is now
+   present (e.g. `exiftool -OpcodeList2 capture.dng`) and that a DNG-aware
    viewer shows flatter corners and less color drift than before.
 5. Repeat for every physical camera (main, ultrawide, tele, front, ...)
    exposed by the device -- each has its own lens and needs its own

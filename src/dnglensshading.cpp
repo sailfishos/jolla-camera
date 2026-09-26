@@ -14,6 +14,7 @@
 #include <QJsonObject>
 #include <QStringList>
 #include <QVector>
+#include <cstring>
 
 namespace {
 
@@ -46,6 +47,21 @@ QStringList cfaPhaseNames(const QString &cfa)
     return {};
 }
 
+// QDataStream::operator<<(float) on at least some Qt 5 builds (observed:
+// Qt 5.15.13) silently promotes its argument to double and writes 8 bytes
+// instead of the 4-byte IEEE-754 float the DNG spec requires for MapGains,
+// which corrupts every opcode after the first (the declared ParameterSize
+// no longer matches what was actually written, so readers desync trying to
+// find the next opcode). Bypass the ambiguous overload entirely by writing
+// the float's raw 4-byte representation as a quint32.
+quint32 floatBitsBigEndian(float value)
+{
+    quint32 bits;
+    static_assert(sizeof(bits) == sizeof(value), "unexpected float size");
+    memcpy(&bits, &value, sizeof(bits));
+    return bits;
+}
+
 void writeGainMapOpcode(QDataStream &stream, quint32 top, quint32 left,
                         quint32 bottom, quint32 right, quint32 mapPointsV,
                         quint32 mapPointsH, double mapSpacingV, double mapSpacingH,
@@ -68,7 +84,7 @@ void writeGainMapOpcode(QDataStream &stream, quint32 top, quint32 left,
     stream << double(0.0) /* MapOriginV */ << double(0.0) /* MapOriginH */;
     stream << quint32(1) /* MapPlanes */;
     for (float gain : mapGains) {
-        stream << gain;
+        stream << floatBitsBigEndian(gain);
     }
 }
 
@@ -76,7 +92,7 @@ void writeGainMapOpcode(QDataStream &stream, quint32 top, quint32 left,
 
 namespace DngLensShading {
 
-QByteArray buildOpcodeList1(const QString &calibrationDir, const QString &cameraId,
+QByteArray buildOpcodeList2(const QString &calibrationDir, const QString &cameraId,
                             const QString &cfaPattern, int width, int height,
                             QString *warning)
 {
@@ -157,15 +173,26 @@ QByteArray buildOpcodeList1(const QString &calibrationDir, const QString &camera
     for (int phase = 0; phase < 4; ++phase) {
         const int top = phase / 2;
         const int left = phase % 2;
-        const int planeHeight = (height - top + 1) / 2;
-        const int planeWidth = (width - left + 1) / 2;
-        const double spacingV = planeHeight > 1
-                ? double(planeHeight - 1) / double(gridRows - 1) : 0.0;
-        const double spacingH = planeWidth > 1
-                ? double(planeWidth - 1) / double(gridCols - 1) : 0.0;
+        // MapSpacingV/H are expressed as a fraction of the FULL image
+        // extent (imageBounds in Adobe's reference dng_gain_map.cpp,
+        // buf_in.height/width in darktable's rawprepare.c), not in pixels
+        // and not relative to this phase's subsampled plane -- confirmed
+        // by reading both of those implementations' actual interpolation
+        // code, not assumed. Using pixel-count spacing here (as an earlier
+        // version of this function did) made the map coordinate stay near
+        // zero across the whole image, collapsing the correction to
+        // essentially one grid sample.
+        const double spacingV = gridRows > 1 ? 1.0 / double(gridRows - 1) : 1.0;
+        const double spacingH = gridCols > 1 ? 1.0 / double(gridCols - 1) : 1.0;
 
+        // Bottom/Right are EXCLUSIVE bounds (equal to the full image height
+        // /width), not the inclusive last row/col index. darktable's own
+        // GainMap validator (rawprepare.c, _check_gain_maps) rejects the
+        // whole set -- silently, hiding its "flat field correction" control
+        // entirely -- unless bottom == image->height and right ==
+        // image->width exactly; verified by reading that function's source.
         writeGainMapOpcode(stream, quint32(top), quint32(left),
-                           quint32(height - 1), quint32(width - 1),
+                           quint32(height), quint32(width),
                            quint32(gridRows), quint32(gridCols),
                            spacingV, spacingH,
                            planeGains.value(phaseNames.at(phase)));

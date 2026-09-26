@@ -7,7 +7,7 @@ Generate a per-channel lens-shading (vignetting + color-shift) calibration
 file from one or more RAW DNG captures of a flat, neutral-grey target.
 
 The output JSON is consumed by the RAWfish camera plugin
-(src/dnglensshading.cpp) to emit a DNG GainMap OpcodeList (OpcodeList1) when
+(src/dnglensshading.cpp) to emit a DNG GainMap OpcodeList (OpcodeList2) when
 saving RAW captures, so viewers/editors correct the falloff automatically.
 
 Usage:
@@ -102,15 +102,39 @@ def extract_planes(raw):
     return planes
 
 
-def tile_average(plane, grid_rows, grid_cols):
-    """Average `plane` into a (grid_rows x grid_cols) grid via edge-padded tiling."""
+def sample_grid(plane, grid_rows, grid_cols, window_fraction=0.5):
+    """
+    Sample `plane` on a (grid_rows x grid_cols) grid whose sample points are
+    anchored exactly at the image edges: sample index 0 sits at row/col 0
+    and the last sample sits at the last row/col. This matches what the
+    DNG GainMap decoder assumes (both the Adobe DNG SDK's
+    dng_gain_map_interpolator and darktable's rawprepare.c place grid
+    point i at the normalized position i/(N-1) of the full image -- see
+    src/dnglensshading.cpp for the corresponding encoder side).
+
+    Each sample averages a small local window centred on that exact
+    position (to reduce sensor noise), rather than the average of a whole
+    non-overlapping tile as an earlier version of this function did. Tile
+    averaging put the grid's edge samples at the *centre* of the outermost
+    tile rather than at the image's actual edge, which systematically
+    under-represents the true falloff right at the corners (the corner
+    pixels are always darker than the average of the wider tile they sit
+    in), so the previous encoding under-corrected the corners specifically
+    even when the middle of the frame was already well corrected.
+    """
     h, w = plane.shape
-    row_edges = np.linspace(0, h, grid_rows + 1).astype(int)
-    col_edges = np.linspace(0, w, grid_cols + 1).astype(int)
+    row_centers = np.linspace(0, h - 1, grid_rows)
+    col_centers = np.linspace(0, w - 1, grid_cols)
+    row_half = max(1, int(window_fraction * h / grid_rows / 2))
+    col_half = max(1, int(window_fraction * w / grid_cols / 2))
     grid = np.empty((grid_rows, grid_cols), dtype=np.float64)
-    for r in range(grid_rows):
-        for c in range(grid_cols):
-            tile = plane[row_edges[r]:row_edges[r + 1], col_edges[c]:col_edges[c + 1]]
+    for r, rc in enumerate(row_centers):
+        r0 = max(0, int(round(rc - row_half)))
+        r1 = min(h, int(round(rc + row_half)) + 1)
+        for c, cc in enumerate(col_centers):
+            c0 = max(0, int(round(cc - col_half)))
+            c1 = min(w, int(round(cc + col_half)) + 1)
+            tile = plane[r0:r1, c0:c1]
             grid[r, c] = tile.mean() if tile.size else 0.0
     return grid
 
@@ -125,7 +149,7 @@ def centre_reference(plane, patch_fraction=0.06):
 
 
 def compute_gain_grid(plane, grid_rows, grid_cols, max_gain):
-    tiles = tile_average(plane, grid_rows, grid_cols)
+    tiles = sample_grid(plane, grid_rows, grid_cols)
     reference = centre_reference(plane)
     if reference <= 0:
         raise ValueError("Centre reference value is <= 0; is the capture too dark?")

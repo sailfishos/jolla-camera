@@ -39,8 +39,8 @@
 #define TIFFTAG_NOISEPROFILE 51041
 #endif
 
-#ifndef TIFFTAG_OPCODELIST1
-#define TIFFTAG_OPCODELIST1 51008
+#ifndef TIFFTAG_OPCODELIST2
+#define TIFFTAG_OPCODELIST2 51009
 #endif
 
 #include <algorithm>
@@ -48,6 +48,19 @@
 #include <cstdlib>
 #include <stdint.h>
 #include <utime.h>
+
+namespace {
+// TIFFTAG_NOISEPROFILE and TIFFTAG_OPCODELIST2 are DNG-private tags that this
+// build of libtiff does not register internally (unlike e.g. COLORMATRIX1 or
+// ASSHOTNEUTRAL, which libtiff already knows about). Without registering
+// them first, TIFFSetField() silently fails ("Unknown tag") and the tag is
+// never written -- confirmed both by TIFFSetField's return value and by
+// inspecting the resulting file's IFD directly.
+const TIFFFieldInfo dngPrivateFields[] = {
+    { TIFFTAG_NOISEPROFILE, TIFF_VARIABLE2, TIFF_VARIABLE2, TIFF_DOUBLE, FIELD_CUSTOM, 1, 1, const_cast<char *>("DNGNoiseProfile") },
+    { TIFFTAG_OPCODELIST2, TIFF_VARIABLE2, TIFF_VARIABLE2, TIFF_UNDEFINED, FIELD_CUSTOM, 1, 1, const_cast<char *>("DNGOpcodeList2") },
+};
+}
 
 DeclarativeCameraExtensions::DeclarativeCameraExtensions(QObject *parent)
     : QObject(parent)
@@ -830,6 +843,11 @@ bool writeTiffDng(const QString &metadataPath, const QString &dngPath,
         return false;
     }
 
+    // Register DNG-private tags this libtiff build doesn't know about by
+    // default; see the comment on dngPrivateFields above.
+    TIFFMergeFieldInfo(tiff, dngPrivateFields,
+                        sizeof(dngPrivateFields) / sizeof(dngPrivateFields[0]));
+
     const QByteArray software = QByteArrayLiteral("RAWfish Camera2");
     const QByteArray uniqueModel = QStringLiteral("Sailfish Camera2 camera %1")
             .arg(metadata.value(QStringLiteral("camera_id")).toString())
@@ -918,10 +936,10 @@ bool writeTiffDng(const QString &metadataPath, const QString &dngPath,
     const QString calibrationDir = QStringLiteral(DEPLOYMENT_PATH "calibration");
     const QString cameraId = metadata.value(QStringLiteral("camera_id")).toString();
     QString lensShadingWarning;
-    const QByteArray opcodeList1 = DngLensShading::buildOpcodeList1(
+    const QByteArray opcodeList2 = DngLensShading::buildOpcodeList2(
             calibrationDir, cameraId, cfa, width, height, &lensShadingWarning);
-    if (!opcodeList1.isEmpty()) {
-        TIFFSetField(tiff, TIFFTAG_OPCODELIST1, opcodeList1.size(), opcodeList1.constData());
+    if (!opcodeList2.isEmpty()) {
+        TIFFSetField(tiff, TIFFTAG_OPCODELIST2, opcodeList2.size(), opcodeList2.constData());
     } else if (!lensShadingWarning.isEmpty()) {
         qWarning() << lensShadingWarning;
     }
