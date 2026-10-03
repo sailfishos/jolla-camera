@@ -162,6 +162,7 @@ SettingsOverlay {
     isPortrait: captureView.isPortrait
     topButtonRowHeight: Screen.sizeCategory >= Screen.Large ? Theme.itemSizeLarge : Theme.itemSizeSmall
     deviceToggleEnabled: !captureView.captureBusy
+    softKeysShown: captureView.softKeysShown
 
     function showZoom() {
         zoomIndicator.maximumZoom = camera.maximumDigitalZoom
@@ -246,6 +247,9 @@ SettingsOverlay {
 
         z: settingsOverlay.inButtonLayout ? 1 : 0
         size: Theme.iconSizeMedium
+        // Behind a soft key bar the center key is the shutter. The position editor keeps
+        // it as the handle, because the other corner controls are placed from it.
+        visible: !captureView.softKeysShown || settingsOverlay.inButtonLayout
         anchors.centerIn: parent
         background.visible: icon.opacity < 1.0
         enabled: captureView._canCapture
@@ -318,6 +322,23 @@ SettingsOverlay {
         color: Theme.lightPrimaryColor
         style: Text.Outline
         styleColor: "#20000000"
+    }
+
+    // The countdown digits live on the shutter button, so with it hidden they show
+    // here instead, where the recording duration goes at other times.
+    Label {
+        anchors {
+            top: timerLabel.top
+            horizontalCenter: parent.horizontalCenter
+        }
+        visible: captureView.softKeysShown && captureTimer.running
+        text: Math.floor(captureView._captureCountdown + 1)
+        opacity: captureView._captureCountdown % 1
+        color: Theme.lightPrimaryColor
+        font {
+            pixelSize: Theme.fontSizeHuge
+            weight: Font.Light
+        }
     }
 
     Label {
