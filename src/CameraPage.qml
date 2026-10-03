@@ -285,6 +285,7 @@ Page {
                 height: page.height
 
                 active: true
+                softKeysShown: page.softKeys.active
 
                 orientation: page.orientation
                 pageRotation: page.rotation

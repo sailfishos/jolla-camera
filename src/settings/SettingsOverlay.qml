@@ -17,6 +17,9 @@ PinchArea {
     property bool showCommonControls: true // any controls from here
     property bool deviceToggleEnabled
     property bool inButtonLayout
+    // A soft key bar replaces the touch controls that have keys: the shutter, the
+    // camera switch and the capture mode menu stay hidden while one shows.
+    property bool softKeysShown
 
     property alias shutter: shutterContainer.children
     property alias anchorContainer: anchorContainer
@@ -164,6 +167,7 @@ PinchArea {
                  && labels.length > 0
                  && Settings.deviceId !== Settings.global.frontFacingDeviceId
                  && !inButtonLayout
+                 && !overlay.softKeysShown
         orientation: overlay.isPortrait ? Qt.Horizontal : Qt.Vertical
         enabled: camera.cameraStatus === Camera.ActiveStatus
         model: camera.backFacingCameras
@@ -193,7 +197,7 @@ PinchArea {
         anchors.centerIn: parent
         icon: "image://theme/icon-camera-switch"
         opacity: _commonControlOpacity
-        visible: opacity > 0.0 && camera.hasCameraOnBothSides
+        visible: opacity > 0.0 && camera.hasCameraOnBothSides && !overlay.softKeysShown
         enabled: overlay.deviceToggleEnabled
 
         onClicked: {
@@ -217,7 +221,7 @@ PinchArea {
         alignment: (parent.anchors.left === container.left ? Qt.AlignRight : Qt.AlignLeft) | Qt.AlignBottom
         open: true
         opacity: _commonControlOpacity
-        visible: opacity > 0.0
+        visible: opacity > 0.0 && !overlay.softKeysShown
 
         Rectangle {
             id: captureModeHighlight
