@@ -163,6 +163,11 @@ SettingsOverlay {
     topButtonRowHeight: Screen.sizeCategory >= Screen.Large ? Theme.itemSizeLarge : Theme.itemSizeSmall
     deviceToggleEnabled: !captureView.captureBusy
 
+    function showZoom() {
+        zoomIndicator.maximumZoom = camera.maximumDigitalZoom
+        zoomIndicator.show()
+    }
+
     onPinchStarted: {
         // We're not getting notifications when the maximumDigitalZoom changes,
         // so update the value here.
