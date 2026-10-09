@@ -10,3 +10,4 @@ GalleryView 1.0 gallery/GalleryView.qml
 CameraPage 1.0 CameraPage.qml
 DisabledByMdmView 1.0 DisabledByMdmView.qml
 IsoItem 1.0 settings/IsoItem.qml
+KeypadRules 1.0 capture/KeypadRules.qml

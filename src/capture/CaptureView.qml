@@ -44,6 +44,29 @@ FocusScope {
 
     readonly property bool recording: active && camera.videoRecorder.recorderState == CameraRecorder.RecordingState
 
+    // The touch shutter hides behind a soft key bar, and the countdown gets its own label.
+    property bool softKeysShown
+
+    readonly property bool startingRecording: startRecordTimer.running
+
+    // No capture in flight: the guard for the camera flip and the Options entries,
+    // which captureBusy alone does not give (it covers only the save).
+    readonly property bool idle: keypadRules.idle(captureTimer.running, _captureOnFocus, captureBusy,
+                                                  startingRecording, recording)
+
+    readonly property bool canCaptureByKey: _canCapture && !_captureOnFocus
+
+    // A flip is under way until the status has left active and come back: it still
+    // reads active for a moment after the device changes, and can say so once more.
+    property bool _switchingCamera
+    property bool _switchLeftActive
+
+    readonly property var _cameraOrder: keypadRules.cameraOrder(Settings.global.backCameraLabels.length,
+                                                                camera.backFacingCameras,
+                                                                Settings.global.previousBackFacingDeviceId,
+                                                                Settings.global.frontFacingDeviceId,
+                                                                camera.hasCameraOnBothSides)
+
     property bool _unload
 
     property bool touchFocusSupported: (camera.focus.focusMode == Camera.FocusAuto
@@ -172,6 +195,47 @@ FocusScope {
                 camera.record()
             }
         }
+    }
+
+    // The center soft key: the volume key path, locking the focus first and letting
+    // captureImage() wait for the lock. During a countdown or a recording the lock is
+    // a no-op and _triggerCapture() cancels or stops.
+    function captureByKey() {
+        camera.lockAutoFocus()
+        _triggerCapture()
+    }
+
+    // Left and Right. Inert unless idle and the camera is up, as the touch toggle is.
+    // The step starts from the device the camera is on: the stored choice is empty
+    // until something has chosen a camera, while the camera reports the default one.
+    function stepCamera(step) {
+        if (!idle || _switchingCamera || camera.cameraStatus !== Camera.ActiveStatus) {
+            return false
+        }
+        var next = keypadRules.nextCamera(_cameraOrder, camera.deviceId, step)
+        if (next === "" || next === camera.deviceId) {
+            return false
+        }
+        _switchingCamera = true
+        _switchLeftActive = false
+        Settings.deviceId = next
+        camera.digitalZoom = 1.0
+        return true
+    }
+
+    // Up and Down. The maximum is read here, as the pinch does: it has no notification.
+    // At a limit the zoom stays put but the indicator still answers the key.
+    function stepZoom(direction) {
+        if (camera.maximumDigitalZoom <= 1) {
+            return false
+        }
+        var zoom = keypadRules.zoomStep(camera.digitalZoom, camera.maximumDigitalZoom, direction)
+        var moved = zoom !== camera.digitalZoom
+        camera.digitalZoom = zoom
+        if (captureOverlay) {
+            captureOverlay.showZoom()
+        }
+        return moved
     }
 
     function _pickViewfinderResolution(resolutions, aspectRatio) {
@@ -528,7 +592,11 @@ FocusScope {
         onCameraStatusChanged: {
             if (camera.cameraStatus === Camera.ActiveStatus) {
                 reactivateTimer.retryCounter = 0
+                if (captureView._switchLeftActive) {
+                    captureView._switchingCamera = false
+                }
             } else {
+                captureView._switchLeftActive = true
                 _captureQueued = false
                 captureBusy = false
             }
@@ -945,6 +1013,21 @@ FocusScope {
             event.accepted = true
         }
 
+        // The arrows are the viewfinder's own: zoom repeats, the flip does not, and an
+        // inert press is still taken rather than left to walk the focus somewhere.
+        if (event.key === Qt.Key_Up || event.key === Qt.Key_Down) {
+            stepZoom(event.key === Qt.Key_Up ? 1 : -1)
+            event.accepted = true
+            return
+        }
+        if (event.key === Qt.Key_Left || event.key === Qt.Key_Right) {
+            if (!event.isAutoRepeat) {
+                stepCamera(event.key === Qt.Key_Right ? 1 : -1)
+            }
+            event.accepted = true
+            return
+        }
+
         if (event.isAutoRepeat) {
             return
         }
@@ -973,6 +1056,8 @@ FocusScope {
             captureView._triggerCapture()
         }
     }
+
+    KeypadRules { id: keypadRules }
 
     Permissions {
         enabled: captureView.activeFocus
