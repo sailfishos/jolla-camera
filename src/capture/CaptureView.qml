@@ -198,6 +198,14 @@ FocusScope {
         }
     }
 
+    // The center soft key: the volume key path, locking the focus first and letting
+    // captureImage() wait for the lock. During a countdown or a recording the lock is
+    // a no-op and _triggerCapture() cancels or stops.
+    function lockFocusAndCapture() {
+        camera.lockAutoFocus()
+        _triggerCapture()
+    }
+
     function switchToNextCamera() {
         _switchCamera(1)
     }
@@ -1092,6 +1100,25 @@ FocusScope {
                    && captureOnVolumeRelease && handleVolumeKeys) {
             captureView._triggerCapture()
         }
+    }
+
+    SoftKeys.center: SoftKeyAction {
+        actionType: captureView.countingDown ? SoftKeyAction.CancelAction : SoftKeyAction.CustomAction
+        text: {
+            if (captureView.countingDown) {
+                return ""
+            } else if (captureView.recording || captureView.startingRecording) {
+                //% "Stop"
+                return qsTrId("camera-la-softkey_stop")
+            } else if (camera.captureMode == Camera.CaptureVideo) {
+                //% "Record"
+                return qsTrId("camera-la-softkey_record")
+            }
+            //% "Capture"
+            return qsTrId("camera-la-softkey_capture")
+        }
+        enabled: captureView._canCapture && !captureView._captureOnFocus
+        onTriggered: captureView.lockFocusAndCapture()
     }
 
     Permissions {
