@@ -168,6 +168,7 @@ PinchArea {
                  && labels.length > 0
                  && Settings.deviceId !== Settings.global.frontFacingDeviceId
                  && !inButtonLayout
+                 && !SoftKeys.active
         orientation: overlay.isPortrait ? Qt.Horizontal : Qt.Vertical
         enabled: camera.cameraStatus === Camera.ActiveStatus
         model: camera.backFacingCameras
@@ -197,7 +198,7 @@ PinchArea {
         anchors.centerIn: parent
         icon: "image://theme/icon-camera-switch"
         opacity: _commonControlOpacity
-        visible: opacity > 0.0 && camera.hasCameraOnBothSides
+        visible: opacity > 0.0 && camera.hasCameraOnBothSides && !SoftKeys.active
         enabled: overlay.deviceToggleEnabled
 
         onClicked: {
@@ -221,7 +222,7 @@ PinchArea {
         alignment: (parent.anchors.left === container.left ? Qt.AlignRight : Qt.AlignLeft) | Qt.AlignBottom
         open: true
         opacity: _commonControlOpacity
-        visible: opacity > 0.0
+        visible: opacity > 0.0 && !SoftKeys.active
 
         Rectangle {
             id: captureModeHighlight
@@ -457,6 +458,8 @@ PinchArea {
             }
 
             SettingsMenu {
+                id: timerMenu
+
                 width: overlay._menuWidth
                 title: Settings.timerText
                 header: upperHeader
@@ -580,6 +583,21 @@ PinchArea {
             visible: colorFilterMenu.parent === colorFilterParentBegin && colorFilterMenu.active
         }
 
+        // The timer menu's column, kept when empty. Behind a soft key bar the shutter shows
+        // no timer, so the selected one shows here.
+        Item {
+            width: overlay._menuWidth
+            height: width
+            y: timerMenu.currentItem != null ? topRow.dragY(timerMenu.currentItem.y) : 0
+
+            Icon {
+                anchors.centerIn: parent
+                color: Theme.lightPrimaryColor
+                source: Settings.timerIcon(Settings.mode.timer)
+                visible: SoftKeys.active && Settings.mode.timer != 0 && CameraConfigs.ready
+            }
+        }
+
         Item {
             width: overlay._menuWidth
             height: width
@@ -618,6 +636,12 @@ PinchArea {
                 anchors.centerIn: parent
                 value: isoMenu.currentItem ? isoMenu.currentItem.value : 0
             }
+        }
+
+        // The viewfinder grid menu's column, so the icons stay over their own menus.
+        Item {
+            width: overlay._menuWidth
+            height: 1
         }
     }
 

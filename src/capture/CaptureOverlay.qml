@@ -244,12 +244,17 @@ SettingsOverlay {
         property bool canStopVideo: startRecordTimer.running
                                     || camera.videoRecorder.recorderState == CameraRecorder.RecordingState
 
+        // Behind a soft key bar the center key is the shutter, so only the countdown stays
+        // here; the position editor keeps the button as its handle.
+        readonly property bool shown: !SoftKeys.active || settingsOverlay.inButtonLayout
+
         z: settingsOverlay.inButtonLayout ? 1 : 0
         size: Theme.iconSizeMedium
         anchors.centerIn: parent
-        background.visible: icon.opacity < 1.0
+        background.visible: icon.opacity < 1.0 && shown
         enabled: captureView._canCapture
                     && !captureView._captureOnFocus
+                    && shown
 
         onPressed: camera.lockAutoFocus()
         onReleased: {
@@ -262,6 +267,7 @@ SettingsOverlay {
         onCanceled: camera.unlockAutoFocus()
 
         icon {
+            visible: captureButton.shown
             opacity: {
                 if (captureTimer.running) {
                     return Theme.opacityLow
@@ -291,6 +297,7 @@ SettingsOverlay {
             }
             text: captureTimer.running ? Math.floor(captureView._captureCountdown + 1) : Settings.mode.timer
             visible: Settings.mode.timer != 0 && !captureButton.canStopVideo
+                     && (captureButton.shown || captureTimer.running)
             opacity: captureTimer.running ? captureView._captureCountdown % 1 : 1.0
             color: captureTimer.running ? Theme.lightPrimaryColor : Theme.darkPrimaryColor
             font {
