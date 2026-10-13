@@ -168,6 +168,7 @@ PinchArea {
                  && labels.length > 0
                  && Settings.deviceId !== Settings.global.frontFacingDeviceId
                  && !inButtonLayout
+                 && !SoftKeys.active
         orientation: overlay.isPortrait ? Qt.Horizontal : Qt.Vertical
         enabled: camera.cameraStatus === Camera.ActiveStatus
         model: camera.backFacingCameras
@@ -197,7 +198,7 @@ PinchArea {
         anchors.centerIn: parent
         icon: "image://theme/icon-camera-switch"
         opacity: _commonControlOpacity
-        visible: opacity > 0.0 && camera.hasCameraOnBothSides
+        visible: opacity > 0.0 && camera.hasCameraOnBothSides && !SoftKeys.active
         enabled: overlay.deviceToggleEnabled
 
         onClicked: {
@@ -221,7 +222,7 @@ PinchArea {
         alignment: (parent.anchors.left === container.left ? Qt.AlignRight : Qt.AlignLeft) | Qt.AlignBottom
         open: true
         opacity: _commonControlOpacity
-        visible: opacity > 0.0
+        visible: opacity > 0.0 && !SoftKeys.active
 
         Rectangle {
             id: captureModeHighlight
