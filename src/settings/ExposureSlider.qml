@@ -31,6 +31,12 @@ Item {
         handle.y = index * divisionSize_ + mouseArea.drag.minimumY
     }
 
+    // A value set from a key gets the same moving handle and value label as a drag.
+    function flash() {
+        handleBehavior.enabled = true
+        releaseTimer.restart()
+    }
+
     width: Theme.itemSizeMedium
 
     Rectangle {
