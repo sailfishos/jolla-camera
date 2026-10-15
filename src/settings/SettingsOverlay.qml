@@ -742,6 +742,7 @@ PinchArea {
 
             alignment: exposureSlider.alignment
             opacity: enabled ? 1.0 - settingsOpacity : 0.0
+            visible: !SoftKeys.active
             spacing: Theme.paddingMedium
         }
 
@@ -768,7 +769,7 @@ PinchArea {
         }
 
         opacity: qrFilter.result.length !== 0 ? 1.0 : 0.0
-        visible: opacity != 0.0
+        visible: opacity != 0.0 && !SoftKeys.active
         Behavior on opacity { FadeAnimation {} }
 
         CameraButton {
