@@ -9,8 +9,10 @@ import QtMultimedia 5.0
 import Sailfish.Silica 1.0
 import Sailfish.Silica.private 1.0 as Private
 import Sailfish.Gallery 1.0
+import Sailfish.Ambience 1.0
 import com.jolla.camera 1.0
 import ".."
+import "../capture"
 
 PagedView {
     id: root
@@ -28,8 +30,35 @@ PagedView {
     readonly property bool playing: player && player.playing
     property int _oldCount
 
+    // The Options entries while the roll is showing, in place of the camera's own.
+    readonly property var menuEntries: [
+        deleteEntry, shareEntry, detailsEntry, ambienceEntry, skipBackEntry, skipForwardEntry
+    ].concat(additionalMenuEntries)
+    property var additionalMenuEntries: []
+
+    readonly property bool _currentIsImage: !currentItem || currentItem.isImage
+    readonly property bool _currentError: currentItem && currentItem.error
+
     function _positionViewAtBeginning() {
         moveTo(0, PagedView.Immediate)
+    }
+
+    function _togglePlay() {
+        playerLoader.active = true
+        player.togglePlay()
+    }
+
+    // Older captures lie to the right of the current one, as they slide in.
+    function _showOlder() {
+        if (currentIndex < count - 1) {
+            moveTo(currentIndex + 1)
+        }
+    }
+
+    function _showNewer() {
+        if (currentIndex > 0) {
+            moveTo(currentIndex - 1)
+        }
     }
 
     model: captureModel
@@ -38,6 +67,91 @@ PagedView {
     interactive: !positionLocked
     direction: PagedView.RightToLeft
     wrapMode: PagedView.NoWrap
+
+    Keys.onLeftPressed: _showNewer()
+    Keys.onRightPressed: _showOlder()
+
+    SoftKeys.center: SoftKeyAction {
+        text: {
+            if (root._currentIsImage || root._currentError) {
+                return ""
+            } else if (root.playing) {
+                //% "Pause"
+                return qsTrId("camera-la-softkey_pause")
+            }
+            //% "Play"
+            return qsTrId("camera-la-softkey_play")
+        }
+        enabled: !root._currentIsImage && !root._currentError
+        onTriggered: root._togglePlay()
+    }
+
+    SoftKeyMenuEntry {
+        id: deleteEntry
+
+        //% "Delete"
+        text: qsTrId("camera-me-delete")
+        visible: overlay.deletingAllowed
+        onClicked: overlay.remove()
+    }
+
+    SoftKeyMenuEntry {
+        id: shareEntry
+
+        //% "Share"
+        text: qsTrId("camera-me-share")
+        visible: overlay.sharingAllowed
+        onClicked: overlay.triggerAction("share")
+    }
+
+    SoftKeyMenuEntry {
+        id: detailsEntry
+
+        //% "Details"
+        text: qsTrId("camera-me-details")
+        visible: overlay.localFile
+        onClicked: pageStack.animatorPush("Sailfish.Gallery.DetailsPage",
+                                          { "source": root.source, "isImage": root._currentIsImage })
+    }
+
+    SoftKeyMenuEntry {
+        id: ambienceEntry
+
+        property bool _creating
+
+        //% "Create ambience"
+        text: qsTrId("camera-me-create_ambience")
+        visible: overlay.ambienceAllowed
+        enabled: !_creating
+        onClicked: {
+            _creating = true
+            Ambience.create(root.source, function (ambienceId) {
+                pageStack.animatorPush("com.jolla.gallery.ambience.AmbienceSettingsDialog",
+                                       { "contentId": ambienceId })
+                ambienceEntry._creating = false
+            })
+        }
+    }
+
+    SoftKeyMenuEntry {
+        id: skipBackEntry
+
+        //% "Back 10 seconds"
+        text: qsTrId("camera-me-skip_back")
+        visible: !root._currentIsImage && !root._currentError
+        enabled: !player || player.position !== 0
+        onClicked: overlay.seekBackward()
+    }
+
+    SoftKeyMenuEntry {
+        id: skipForwardEntry
+
+        //% "Forward 10 seconds"
+        text: qsTrId("camera-me-skip_forward")
+        visible: !root._currentIsImage && !root._currentError
+        enabled: !player || player.position !== player.duration
+        onClicked: overlay.seekForward()
+    }
 
     onActiveChanged: {
         if (!active) {
@@ -107,10 +221,7 @@ PagedView {
 
             VideoPoster {
                 onClicked: overlay.active = !overlay.active
-                onTogglePlay: {
-                    playerLoader.active = true
-                    player.togglePlay()
-                }
+                onTogglePlay: root._togglePlay()
                 onDoubleClicked: overlay.seekForward()
 
                 contentWidth: root.width
@@ -174,7 +285,39 @@ PagedView {
         error: currentItem && currentItem.error
         editingAllowed: false
 
+        // The Options entries carry the buttons' actions, and Back closes the roll.
+        Binding {
+            target: overlay.detailsButton
+            property: "visible"
+            value: false
+            when: root.SoftKeys.active
+        }
+
+        Binding {
+            target: overlay.topFade
+            property: "visible"
+            value: false
+            when: root.SoftKeys.active
+        }
+
+        // The column holding the toolbar and the video position slider. Hidden by
+        // opacity, as its buttons' visible tells the entries what is allowed.
+        Binding {
+            target: overlay.toolbar.parent
+            property: "opacity"
+            value: 0.0
+            when: root.SoftKeys.active
+        }
+
+        Binding {
+            target: overlay.toolbar.parent
+            property: "enabled"
+            value: false
+            when: root.SoftKeys.active
+        }
+
         Private.DismissButton {
+            visible: !SoftKeys.active
             popPageOnClick: false
             onClicked: page.returnToCaptureMode()
         }
