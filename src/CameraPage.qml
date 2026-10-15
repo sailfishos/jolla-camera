@@ -44,10 +44,10 @@ Page {
     // Back from the camera roll returns to the viewfinder; the launcher key is the way
     // out of the camera itself.
     SoftKeys.left: page.galleryActive ? backToViewfinder : lens
-    SoftKeys.menu: [
-        modeEntry, cameraRollEntry, flashEntry, timerEntry, gridEntry, whiteBalanceEntry,
-        isoEntry, resetEntry
-    ]
+    SoftKeys.menu: page.galleryActive && galleryLoader.item
+                   ? galleryLoader.item.menuEntries
+                   : [modeEntry, cameraRollEntry, qrEntry, flashEntry, timerEntry, gridEntry,
+                      whiteBalanceEntry, isoEntry, resetEntry]
 
     SoftKeyAction {
         id: backToViewfinder
@@ -86,6 +86,16 @@ Page {
         text: qsTrId("camera-me-camera_roll")
         enabled: captureView.idle
         onClicked: switcherView.moveToGallery()
+    }
+
+    SoftKeyMenuEntry {
+        id: qrEntry
+
+        //% "Open QR code"
+        text: qsTrId("camera-me-open_qr_code")
+        visible: qrFilter.result.length !== 0
+        enabled: captureView.idle
+        onClicked: pageStack.animatorPush(Qt.resolvedUrl("settings/QrPage.qml"), { "text": qrFilter.result })
     }
 
     SoftKeyMenuEntry {
@@ -257,6 +267,7 @@ Page {
                     id: galleryLoader
 
                     anchors.fill: parent
+                    focus: true
 
                     asynchronous: true
                     visible: switcherView.moving || page.galleryActive || returnToCaptureModeTimeout.running
