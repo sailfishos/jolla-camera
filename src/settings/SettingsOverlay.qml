@@ -76,6 +76,10 @@ PinchArea {
 
     signal clicked(var mouse)
 
+    function showExposure() {
+        exposureSlider.flash()
+    }
+
     function closeMenus() {
         _closing = true
         whiteBalanceMenu.open = false
@@ -164,6 +168,7 @@ PinchArea {
                  && labels.length > 0
                  && Settings.deviceId !== Settings.global.frontFacingDeviceId
                  && !inButtonLayout
+                 && !SoftKeys.active
         orientation: overlay.isPortrait ? Qt.Horizontal : Qt.Vertical
         enabled: camera.cameraStatus === Camera.ActiveStatus
         model: camera.backFacingCameras
@@ -193,7 +198,7 @@ PinchArea {
         anchors.centerIn: parent
         icon: "image://theme/icon-camera-switch"
         opacity: _commonControlOpacity
-        visible: opacity > 0.0 && camera.hasCameraOnBothSides
+        visible: opacity > 0.0 && camera.hasCameraOnBothSides && !SoftKeys.active
         enabled: overlay.deviceToggleEnabled
 
         onClicked: {
@@ -217,7 +222,7 @@ PinchArea {
         alignment: (parent.anchors.left === container.left ? Qt.AlignRight : Qt.AlignLeft) | Qt.AlignBottom
         open: true
         opacity: _commonControlOpacity
-        visible: opacity > 0.0
+        visible: opacity > 0.0 && !SoftKeys.active
 
         Rectangle {
             id: captureModeHighlight
@@ -714,6 +719,7 @@ PinchArea {
 
             alignment: exposureSlider.alignment
             opacity: enabled ? 1.0 - settingsOpacity : 0.0
+            visible: !SoftKeys.active
             spacing: Theme.paddingMedium
         }
 
@@ -740,7 +746,7 @@ PinchArea {
         }
 
         opacity: qrFilter.result.length !== 0 ? 1.0 : 0.0
-        visible: opacity != 0.0
+        visible: opacity != 0.0 && !SoftKeys.active
         Behavior on opacity { FadeAnimation {} }
 
         CameraButton {

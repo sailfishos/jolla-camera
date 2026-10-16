@@ -35,10 +35,21 @@ GalleryView {
     overlay.ambienceAllowed: false
     overlay.additionalActions: IconButton {
         icon.source: "image://theme/icon-m-file-image?" + Theme.lightPrimaryColor
-        onClicked: {
-            var source = root.source + ""
-            dbusGallery.call('openFile', source)
-        }
+        onClicked: root._openInGallery()
+    }
+    additionalMenuEntries: [openInGalleryEntry]
+
+    function _openInGallery() {
+        var source = root.source + ""
+        dbusGallery.call('openFile', source)
+    }
+
+    SoftKeyMenuEntry {
+        id: openInGalleryEntry
+
+        //% "Open in Gallery"
+        text: qsTrId("camera-me-open_in_gallery")
+        onClicked: root._openInGallery()
     }
 
     ViewPlaceholder {
