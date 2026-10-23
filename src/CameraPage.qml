@@ -34,6 +34,13 @@ Page {
         switcherView.returnToCaptureMode()
     }
 
+    function showViewfinder(args) {
+        if (captureView.idle && (args === "image" || args === "video")) {
+            Settings.global.captureMode = args
+        }
+        returnToCaptureMode()
+    }
+
     palette.colorScheme: Theme.LightOnDark
 
     _opaqueBackground: true

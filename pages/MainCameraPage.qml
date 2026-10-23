@@ -57,7 +57,7 @@ CameraPage {
 
         signal showViewfinder(variant args)
         onShowViewfinder: {
-            page.returnToCaptureMode()
+            page.showViewfinder(args)
             window.activate()
         }
 
