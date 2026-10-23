@@ -41,6 +41,130 @@ Page {
     allowedOrientations: captureView.inButtonLayout ? page.orientation : Orientation.All
     cutoutMode: CutoutMode.FullScreen
 
+    // Back from the camera roll returns to the viewfinder; the launcher key is the way
+    // out of the camera itself.
+    SoftKeys.left: page.galleryActive ? backToViewfinder : lens
+    SoftKeys.menu: page.galleryActive && galleryLoader.item ? galleryLoader.item.menu : cameraMenu
+
+    SoftKeyAction {
+        id: backToViewfinder
+
+        actionType: SoftKeyAction.BackAction
+        onTriggered: page.returnToCaptureMode()
+    }
+
+    SoftKeyAction {
+        id: lens
+
+        //% "Lens"
+        text: qsTrId("camera-la-softkey_lens")
+        enabled: captureView.idle && captureView.camera.hasCameraOnBothSides
+        onTriggered: captureView.switchToNextCamera()
+    }
+
+    // Listed by visible when the menu opens; enabled is read live, so the items gray out
+    // if a capture starts while the menu is up. A change the menu would show waits for
+    // delayedClick.
+    readonly property Item cameraMenu: ContextMenu {
+        MenuItem {
+            text: Settings.global.captureMode === "image"
+                  ? //% "Video mode"
+                    qsTrId("camera-me-video_mode")
+                  : //% "Photo mode"
+                    qsTrId("camera-me-photo_mode")
+            enabled: captureView.idle
+            onDelayedClick: Settings.global.captureMode = Settings.global.captureMode === "image" ? "video" : "image"
+        }
+
+        MenuItem {
+            //% "Camera roll"
+            text: qsTrId("camera-me-camera_roll")
+            enabled: captureView.idle
+            onDelayedClick: switcherView.moveToGallery()
+        }
+
+        MenuItem {
+            //% "Open QR code"
+            text: qsTrId("camera-me-open_qr_code")
+            visible: qrFilter.result.length !== 0
+            enabled: captureView.idle
+            onClicked: pageStack.animatorPush(Qt.resolvedUrl("settings/QrPage.qml"), { "text": qrFilter.result })
+        }
+
+        MenuItem {
+            //% "Flash"
+            text: qsTrId("camera-me-flash")
+            visible: CameraConfigs.supportedFlashModes.length > 1
+            enabled: captureView.idle
+            onClicked: page._pickValue(text, CameraConfigs.supportedFlashModes, Settings.mode.flash,
+                                       Settings.flashText, Settings.flashIcon,
+                                       function (value) { Settings.mode.flash = value })
+        }
+
+        MenuItem {
+            //% "Timer"
+            text: qsTrId("camera-me-timer")
+            enabled: captureView.idle
+            onClicked: page._pickValue(text, [0, 3, 10, 15], Settings.mode.timer,
+                                       Settings.timerText, Settings.timerIcon,
+                                       function (value) { Settings.mode.timer = value })
+        }
+
+        MenuItem {
+            text: Settings.global.viewfinderGrid === "none"
+                  ? //% "Show grid"
+                    qsTrId("camera-me-grid_show")
+                  : //% "Hide grid"
+                    qsTrId("camera-me-grid_hide")
+            enabled: captureView.idle
+            onDelayedClick: Settings.global.viewfinderGrid = Settings.global.viewfinderGrid === "none" ? "thirds" : "none"
+        }
+
+        MenuItem {
+            // The modes the touch menu offers: it hides those without an icon.
+            readonly property var modes: CameraConfigs.supportedWhiteBalanceModes.filter(function (mode) {
+                return Settings.whiteBalanceIcon(mode) !== ""
+            })
+
+            //% "White balance"
+            text: qsTrId("camera-me-white_balance")
+            // With a color filter the camera forces automatic white balance, as the touch menu's disabling says.
+            visible: modes.length > 1
+                     && captureView.camera.imageProcessing.colorFilter === CameraImageProcessing.ColorFilterNone
+            enabled: captureView.idle
+            onClicked: page._pickValue(text, modes, Settings.global.whiteBalance,
+                                       Settings.whiteBalanceText, Settings.whiteBalanceIcon,
+                                       function (value) { Settings.global.whiteBalance = value })
+        }
+
+        MenuItem {
+            //% "Light sensitivity"
+            text: qsTrId("camera-me-light_sensitivity")
+            visible: CameraConfigs.supportedIsoSensitivities.length > 1
+            enabled: captureView.idle
+            onClicked: page._pickValue(text, CameraConfigs.supportedIsoSensitivities, Settings.mode.iso,
+                                       Settings.isoText, null,
+                                       function (value) { Settings.mode.iso = value })
+        }
+
+        MenuItem {
+            //% "Reset settings"
+            text: qsTrId("camera-me-reset_settings")
+            visible: !Settings.defaultSettings
+            enabled: captureView.idle
+            onDelayedClick: Settings.reset()
+        }
+    }
+
+    function _pickValue(title, values, current, textFor, iconFor, onSelected) {
+        pageStack.animatorPush(Qt.resolvedUrl("settings/ValuePickerPage.qml"), {
+                                   "title": title, "values": values, "current": current,
+                                   "textFor": textFor, "iconFor": iconFor
+                               }).pageCompleted.connect(function (picker) {
+            picker.selected.connect(onSelected)
+        })
+    }
+
     Item {
         parent: page.parent
 
@@ -82,6 +206,17 @@ Page {
             }
         }
 
+        // What the touch swipe ends in. The loader is sourced as the transition handler
+        // does it, and the timeout marks the move as a transition so galleryActive
+        // updates when it settles.
+        function moveToGallery() {
+            if (galleryLoader.source == "") {
+                galleryLoader.setSource(page.galleryView, { page: page })
+            }
+            returnToCaptureModeTimeout.restart()
+            switcherView.currentIndex = 0
+        }
+
         Timer {
             id: returnToCaptureModeTimeout
 
@@ -114,6 +249,7 @@ Page {
                     id: galleryLoader
 
                     anchors.fill: parent
+                    focus: true
 
                     asynchronous: true
                     visible: switcherView.moving || page.galleryActive || returnToCaptureModeTimeout.running

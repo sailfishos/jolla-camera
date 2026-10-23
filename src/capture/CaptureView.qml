@@ -43,6 +43,30 @@ FocusScope {
     property QtObject viewfinder
 
     readonly property bool recording: active && camera.videoRecorder.recorderState == CameraRecorder.RecordingState
+    readonly property bool startingRecording: startRecordTimer.running
+    readonly property bool countingDown: captureTimer.running
+
+    // No capture in flight in any of its forms; captureBusy alone covers only the save.
+    readonly property bool idle: !countingDown && !_captureOnFocus && !captureBusy
+                                 && !startingRecording && !recording
+
+    // A device change is done once the status has gone inactive and come back: it
+    // still reads active for a moment after the change, and can say so once more.
+    property bool _cameraChanging
+    property bool _cameraWentInactive
+
+    // The back cameras, then the front one.
+    readonly property var _cameraIds: {
+        var ids = []
+        var backCameras = camera.backFacingCameras || []
+        for (var i = 0; i < backCameras.length; ++i) {
+            ids.push(backCameras[i].deviceId)
+        }
+        if (camera.hasCameraOnBothSides) {
+            ids.push(Settings.global.frontFacingDeviceId)
+        }
+        return ids
+    }
 
     property bool _unload
 
@@ -174,6 +198,55 @@ FocusScope {
         }
     }
 
+    // The center soft key: the volume key path, locking the focus first and letting
+    // captureImage() wait for the lock. During a countdown or a recording the lock is
+    // a no-op and _triggerCapture() cancels or stops.
+    function lockFocusAndCapture() {
+        camera.lockAutoFocus()
+        _triggerCapture()
+    }
+
+    // Inert unless idle and the camera is up, as the touch toggle is. A device outside
+    // the list goes to its first entry.
+    function switchToNextCamera() {
+        if (!idle || _cameraChanging || camera.cameraStatus !== Camera.ActiveStatus
+                || _cameraIds.length < 2) {
+            return
+        }
+        var next = _cameraIds[(_cameraIds.indexOf(camera.deviceId) + 1) % _cameraIds.length]
+        if (next !== camera.deviceId) {
+            Settings.deviceId = next
+            camera.digitalZoom = 1.0
+        }
+    }
+
+    // One step along the exposure compensation values, which run from the brightest
+    // down, so a step up is a step towards the front of the list.
+    function _adjustExposure(steps) {
+        var values = Settings.global.exposureCompensationValues
+        var index = values.indexOf(Settings.global.exposureCompensation)
+        if (index < 0) {
+            index = values.indexOf(0)
+        }
+        if (captureOverlay) {
+            captureOverlay.showExposure()
+        }
+        Settings.global.exposureCompensation = values[Math.max(0, Math.min(values.length - 1, index - steps))]
+    }
+
+    // A tenth of the range per step, clamped. The maximum is read here, as the pinch
+    // does, since it has no notification; at a limit the indicator still answers.
+    function _zoomBy(steps) {
+        var maximum = camera.maximumDigitalZoom
+        if (maximum <= 1) {
+            return
+        }
+        camera.digitalZoom = Math.max(1, Math.min(maximum, camera.digitalZoom + steps * (maximum - 1) / 10))
+        if (captureOverlay) {
+            captureOverlay.showZoom()
+        }
+    }
+
     function _pickViewfinderResolution(resolutions, aspectRatio) {
         var ratio
         if (aspectRatio === CameraConfigs.AspectRatio_16_9) {
@@ -272,6 +345,8 @@ FocusScope {
     }
 
     onDeviceIdChanged: {
+        _cameraChanging = true
+        _cameraWentInactive = false
         _resetFocus()
         captureTimer.reset()
         Settings.global.deviceId = Settings.deviceId
@@ -528,7 +603,11 @@ FocusScope {
         onCameraStatusChanged: {
             if (camera.cameraStatus === Camera.ActiveStatus) {
                 reactivateTimer.retryCounter = 0
+                if (captureView._cameraWentInactive) {
+                    captureView._cameraChanging = false
+                }
             } else {
+                captureView._cameraWentInactive = true
                 _captureQueued = false
                 captureBusy = false
             }
@@ -945,6 +1024,20 @@ FocusScope {
             event.accepted = true
         }
 
+        // The arrows are the viewfinder's own, repeats included: Up and Down zoom, Left
+        // and Right step the exposure. An inert press at a limit is still taken rather
+        // than left to walk the focus somewhere.
+        if (event.key === Qt.Key_Up || event.key === Qt.Key_Down) {
+            _zoomBy(event.key === Qt.Key_Up ? 1 : -1)
+            event.accepted = true
+            return
+        }
+        if (event.key === Qt.Key_Left || event.key === Qt.Key_Right) {
+            _adjustExposure(event.key === Qt.Key_Right ? 1 : -1)
+            event.accepted = true
+            return
+        }
+
         if (event.isAutoRepeat) {
             return
         }
@@ -972,6 +1065,25 @@ FocusScope {
                    && captureOnVolumeRelease && handleVolumeKeys) {
             captureView._triggerCapture()
         }
+    }
+
+    SoftKeys.center: SoftKeyAction {
+        actionType: captureView.countingDown ? SoftKeyAction.CancelAction : SoftKeyAction.CustomAction
+        text: {
+            if (captureView.countingDown) {
+                return ""
+            } else if (captureView.recording || captureView.startingRecording) {
+                //% "Stop"
+                return qsTrId("camera-la-softkey_stop")
+            } else if (camera.captureMode == Camera.CaptureVideo) {
+                //% "Record"
+                return qsTrId("camera-la-softkey_record")
+            }
+            //% "Capture"
+            return qsTrId("camera-la-softkey_capture")
+        }
+        enabled: captureView._canCapture && !captureView._captureOnFocus
+        onTriggered: captureView.lockFocusAndCapture()
     }
 
     Permissions {
