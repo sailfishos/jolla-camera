@@ -1079,8 +1079,8 @@ FocusScope {
                 //% "Record"
                 return qsTrId("camera-la-softkey_record")
             }
-            //% "Capture"
-            return qsTrId("camera-la-softkey_capture")
+            //% "Shutter"
+            return qsTrId("camera-la-softkey_shutter")
         }
         enabled: captureView._canCapture && !captureView._captureOnFocus
         onTriggered: captureView.lockFocusAndCapture()
