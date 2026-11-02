@@ -5,6 +5,7 @@
 
 import QtQuick 2.0
 import QtMultimedia 5.6
+import Sailfish.Silica 1.0
 import Nemo.Configuration 1.0
 import com.jolla.camera 1.0
 
@@ -15,6 +16,7 @@ SettingsBase {
     property string deviceId: global.deviceId
 
     readonly property int aspectRatio: mode.aspectRatio
+    readonly property bool fillViewfinder: Screen.sizeCategory < Screen.Medium
     property var viewfinderGridValues: [ "none", "thirds" ]
 
     readonly property var settingsDefaults: ({

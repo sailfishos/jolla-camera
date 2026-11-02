@@ -40,7 +40,7 @@ ApplicationWindow {
         visible: (pageStack.depth < 2 && !pageStack.busy) || !galleryActive
     }
 
-    VideoOutput {
+    ViewfinderOutput {
         id: videoOutput
 
         z: -1
