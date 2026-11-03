@@ -157,9 +157,9 @@ void CameraConfigs::handleStatus()
                 QCameraInfo cameraInfo(*m_camera);
                 QVariant value;
                 if (cameraInfo.position() == QCamera::FrontFace) {
-                    value = MDConfItem("/apps/jolla-camera/secondary/image/exposureModeValues").value();
+                    value = MDConfItem("/apps/jolla-camera/front/image/exposureModeValues").value();
                 } else {
-                    value = MDConfItem("/apps/jolla-camera/primary/image/exposureModeValues").value();
+                    value = MDConfItem("/apps/jolla-camera/back/image/exposureModeValues").value();
                 }
                 if (!value.isNull()) {
                     QList<QVariant> values = value.toList();

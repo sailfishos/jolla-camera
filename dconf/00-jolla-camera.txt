@@ -7,42 +7,42 @@ exposureCompensation=0
 whiteBalance=0
 viewfinderGrid='none'
 
-[apps/jolla-camera/primary/image]
-captureMode=1
+[apps/jolla-camera/back/image]
+aspectRatio=0
 iso=0
 flash=1
 exposureMode=1
 meteringMode=1
 timer=0
-meteringModeValues=[1, 2, 3]
 exposureModeValues=[1, 2, 3, 6, 23]
+enableHighres=false
 
-[apps/jolla-camera/secondary/image]
-captureMode=1
+[apps/jolla-camera/front/image]
+aspectRatio=0
 iso=0
 flash=2
 exposureMode=1
 meteringMode=1
 timer=0
-meteringModeValues=[1, 2, 3]
 exposureModeValues=[1, 2, 3, 6, 23]
+enableHighres=false
 
-[apps/jolla-camera/primary/video]
-captureMode=2
+[apps/jolla-camera/back/video]
+aspectRatio=1
 iso=0
 flash=2
 exposureMode=1
 meteringMode=1
 timer=0
-meteringModeValues=[1, 2, 3]
 exposureModeValues=[1, 3, 6]
+enableHighres=false
 
-[apps/jolla-camera/secondary/video]
-captureMode=2
+[apps/jolla-camera/front/video]
+aspectRatio=1
 iso=0
 flash=2
 exposureMode=1
 meteringMode=1
 timer=0
-meteringModeValues=[1, 2, 3]
 exposureModeValues=[1, 3, 6]
+enableHighres=false
