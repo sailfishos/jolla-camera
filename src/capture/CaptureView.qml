@@ -158,6 +158,13 @@ FocusScope {
             width: isPortrait ? captureView.width : captureView.height
             height: isPortrait ? captureView.height : captureView.width
             rotation: -captureView.pageRotation
+            // The part of the viewfinder that its fill scale leaves on screen.
+            sourceRect: sourceItem && sourceItem.fillScale > 1
+                        ? Qt.rect(sourceItem.width * (1 - 1 / sourceItem.fillScale) / 2,
+                                  sourceItem.height * (1 - 1 / sourceItem.fillScale) / 2,
+                                  sourceItem.width / sourceItem.fillScale,
+                                  sourceItem.height / sourceItem.fillScale)
+                        : Qt.rect(0, 0, 0, 0)
         }
     }
 
@@ -940,10 +947,20 @@ FocusScope {
     Item {
         id: focusArea
 
+        // A filling viewfinder grows until its long side covers the screen's, as the frame does.
+        readonly property real fillScale: {
+            if (!Settings.fillViewfinder) {
+                return 1
+            }
+            var ratio = camera.viewfinder.resolution.width / camera.viewfinder.resolution.height
+            return Math.max(1, Screen.height / (Screen.width * ratio))
+        }
+
         width: Screen.width
                * camera.viewfinder.resolution.width
                / camera.viewfinder.resolution.height
-        height: Screen.width
+               * fillScale
+        height: Screen.width * fillScale
 
         rotation: -captureView.viewfinderOrientation
         anchors {

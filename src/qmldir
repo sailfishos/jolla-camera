@@ -6,6 +6,7 @@
 module com.jolla.camera
 plugin jollacameraplugin
 CaptureView 1.0 capture/CaptureView.qml
+ViewfinderOutput 1.0 capture/ViewfinderOutput.qml
 GalleryView 1.0 gallery/GalleryView.qml
 CameraPage 1.0 CameraPage.qml
 DisabledByMdmView 1.0 DisabledByMdmView.qml
