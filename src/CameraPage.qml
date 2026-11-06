@@ -49,8 +49,11 @@ Page {
     cutoutMode: CutoutMode.FullScreen
 
     // Back from the camera roll returns to the viewfinder; the launcher key is the way
-    // out of the camera itself.
-    SoftKeys.left: page.galleryActive ? backToViewfinder : lens
+    // out of the camera itself. The alternative display uses that same key, beside
+    // the shutter, to leave the mode. The hardware back key is that soft key.
+    SoftKeys.left: page.galleryActive ? backToViewfinder
+                   : (captureView.alternativeDisplayOn || captureView.alternativeDisplayPending)
+                     ? endAlternativeDisplay : lens
     SoftKeys.menu: page.galleryActive && galleryLoader.item ? galleryLoader.item.menu : cameraMenu
 
     SoftKeyAction {
@@ -61,11 +64,19 @@ Page {
     }
 
     SoftKeyAction {
+        id: endAlternativeDisplay
+
+        actionType: SoftKeyAction.BackAction
+        onTriggered: captureView.stopAlternativeDisplay()
+    }
+
+    SoftKeyAction {
         id: lens
 
         //% "Lens"
         text: qsTrId("camera-la-softkey_lens")
         enabled: captureView.idle && captureView.camera.hasCameraOnBothSides
+                 && !captureView.alternativeDisplayOn && !captureView.alternativeDisplayPending
         onTriggered: captureView.switchToNextCamera()
     }
 
@@ -81,6 +92,19 @@ Page {
                     qsTrId("camera-me-photo_mode")
             enabled: captureView.idle
             onDelayedClick: Settings.global.captureMode = Settings.global.captureMode === "image" ? "video" : "image"
+        }
+
+        MenuItem {
+            text: captureView.alternativeDisplayOn
+                  ? qsTrId(Settings.global.alternativeDisplayEndText)
+                  : qsTrId(Settings.global.alternativeDisplayText)
+            visible: Settings.global.alternativeDisplay
+                     && Settings.global.alternativeDisplayText
+                     && Settings.global.alternativeDisplayEndText
+                     && Settings.global.captureMode === "image"
+                     && captureView.camera.position === Camera.BackFace
+            enabled: captureView.idle && (captureView.alternativeDisplayOn || !captureView.alternativeDisplayBusy)
+            onDelayedClick: captureView.alternativeDisplayOn ? captureView.stopAlternativeDisplay() : captureView.startAlternativeDisplay()
         }
 
         MenuItem {
@@ -240,8 +264,18 @@ Page {
         focus: true
 
         Keys.onPressed: {
-            if (!event.isAutoRepeat && event.key == Qt.Key_Camera) {
+            if (event.isAutoRepeat)
+                return
+            if (event.key == Qt.Key_Camera) {
                 switcherView.returnToCaptureMode()
+            } else if (event.key == Qt.Key_F24 && Settings.global.alternativeDisplay) {
+                // Lid closed: the cover camera owns this key. Lid open: it
+                // reaches the app and toggles the alternative display.
+                if (captureView.alternativeDisplayOn || captureView.alternativeDisplayPending)
+                    captureView.stopAlternativeDisplay()
+                else
+                    captureView.startAlternativeDisplay()
+                event.accepted = true
             }
         }
 
@@ -296,6 +330,12 @@ Page {
 
                 CameraRollHint { z: 2 }
                 CameraModeHint { z: 2 }
+
+                Binding {
+                    target: captureView.viewfinder
+                    property: "opacity"
+                    value: captureView.alternativeDisplayOn ? 0 : 1
+                }
 
                 Binding {
                     target: captureView.viewfinder

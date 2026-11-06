@@ -6,6 +6,7 @@
 
 import QtQuick 2.4
 import QtMultimedia 5.4
+import Nemo.DBus 2.0
 import Nemo.Policy 1.0
 import Nemo.Ngf 1.0
 import Nemo.Notifications 1.0
@@ -49,6 +50,12 @@ FocusScope {
     // No capture in flight in any of its forms; captureBusy alone covers only the save.
     readonly property bool idle: !countingDown && !_captureOnFocus && !captureBusy
                                  && !startingRecording && !recording
+
+    property bool alternativeDisplayOn
+    property bool alternativeDisplayPending
+    property bool alternativeDisplayBusy
+    property bool _alternativeDisplayStartSent
+    property int _alternativeDisplayGen
 
     // A device change is done once the status has gone inactive and come back: it
     // still reads active for a moment after the change, and can say so once more.
@@ -113,7 +120,7 @@ FocusScope {
         }
     }
 
-    property bool handleVolumeKeys: camera.imageCapture.ready
+    property bool handleVolumeKeys: (alternativeDisplayOn || camera.imageCapture.ready)
                                     && keysResource.acquired
                                     && camera.captureMode == Camera.CaptureStillImage
                                     && !captureView._captureOnFocus
@@ -182,7 +189,71 @@ FocusScope {
         camera.unlock()
     }
 
+    function startAlternativeDisplay() {
+        if (alternativeDisplayOn || alternativeDisplayBusy || !Settings.global.alternativeDisplay)
+            return
+        if (camera.position !== Camera.BackFace || Settings.global.captureMode !== "image")
+            return
+        var gen = ++_alternativeDisplayGen
+        alternativeDisplayBusy = true
+        alternativeDisplayPending = true
+        _alternativeDisplayStartSent = false
+        _alternativeDisplayStartIfReleased(gen)
+    }
+
+    function stopAlternativeDisplay() {
+        var was = alternativeDisplayOn || alternativeDisplayPending
+        _alternativeDisplayGen++
+        _alternativeDisplayStartSent = false
+        alternativeDisplayOn = false
+        alternativeDisplayPending = false
+        alternativeDisplayBusy = false
+        if (was)
+            alternativeDisplayBus.typedCall("Stop", [], function () {}, function () {})
+    }
+
+    function alternativeDisplayCapture() {
+        if (!alternativeDisplayOn)
+            return
+        alternativeDisplayBus.typedCall("Capture", [], function () {}, function () {})
+    }
+
+    function _alternativeDisplayStartIfReleased(gen) {
+        if (gen !== _alternativeDisplayGen || !alternativeDisplayPending || _alternativeDisplayStartSent)
+            return
+        if (camera.cameraState !== Camera.UnloadedState
+                || camera.cameraStatus !== Camera.UnloadedStatus)
+            return
+        _alternativeDisplayStartSent = true
+        // Hold the app camera released as soon as the request is sent. The
+        // reply is not the JS boolean true, and waiting for that check let
+        // the viewfinder start again and take the camera back.
+        alternativeDisplayOn = true
+        alternativeDisplayBus.typedCall("Start",
+                                [{ "type": "s", "value": Settings.photoDirectory }],
+                                function (ok) {
+                                    if (gen !== captureView._alternativeDisplayGen)
+                                        return
+                                    captureView.alternativeDisplayBusy = false
+                                    captureView.alternativeDisplayPending = false
+                                    if (ok === false || ok === 0)
+                                        captureView.alternativeDisplayOn = false
+                                }, function (error) {
+                                    console.warn("alternative display:", error)
+                                    if (gen !== captureView._alternativeDisplayGen)
+                                        return
+                                    captureView.alternativeDisplayBusy = false
+                                    captureView.alternativeDisplayPending = false
+                                    captureView.alternativeDisplayOn = false
+                                })
+    }
+
     function _triggerCapture() {
+        if (alternativeDisplayOn) {
+            captureOnVolumeRelease = false
+            alternativeDisplayCapture()
+            return
+        }
         // avoid duplicate capture if volume key and some other key trigger (e.g. shutter)
         captureOnVolumeRelease = false
 
@@ -368,6 +439,8 @@ FocusScope {
         qrFilter.clearResult()
 
         if (!effectiveActive) {
+            if (alternativeDisplayOn || alternativeDisplayPending)
+                stopAlternativeDisplay()
             _resetFocus()
             captureTimer.reset()
         }
@@ -385,6 +458,8 @@ FocusScope {
         running: captureView._unload && (camera.cameraStatus === Camera.UnloadedStatus
                                          || camera.cameraStatus === Camera.CameraError)
         onTriggered: {
+            if (captureView.alternativeDisplayOn || captureView.alternativeDisplayPending)
+                return
             captureView._unload = false
         }
     }
@@ -396,9 +471,14 @@ FocusScope {
         readonly property bool abort: retryCounter >= 5
 
         interval: 1000
+        // active = false ends alternative-display mode. Never do that while
+        // that viewfinder owns the camera; a load that lasts a second is the
+        // handoff, not a stuck camera.
         running: camera.cameraStatus == Camera.LoadingStatus && !abort
+                 && !captureView.alternativeDisplayOn && !captureView.alternativeDisplayPending
         onTriggered: {
-            // Try re-activate when stuck in loading status for 1sec.
+            if (captureView.alternativeDisplayOn || captureView.alternativeDisplayPending)
+                return
             active = false
             active = true
             ++retryCounter
@@ -558,6 +638,8 @@ FocusScope {
         property bool reloadCheckEnabled
         property bool needsReload: reloadCheckEnabled
                                    && captureView.effectiveActive
+                                   && !captureView.alternativeDisplayOn
+                                   && !captureView.alternativeDisplayPending
                                    && (camera.errorCode === Camera.CameraError
                                        || (camera.cameraState === Camera.UnloadedState
                                            && camera.cameraStatus === Camera.UnloadedStatus))
@@ -566,7 +648,8 @@ FocusScope {
         Component.onCompleted: reloadCheckEnabled = true
 
         onErrorCodeChanged: {
-            if (errorCode == Camera.CameraError) {
+            if (errorCode == Camera.CameraError
+                    && !captureView.alternativeDisplayOn && !captureView.alternativeDisplayPending) {
                 captureView._unload = true
             }
         }
@@ -582,15 +665,22 @@ FocusScope {
                                                             : Camera.CaptureVideo
 
         onCaptureModeChanged: {
-            // Reset flash mode when changing to video mode
+            // Reset flash mode when changing to video mode. Unloading the
+            // camera also reports a new mode and device, so only a real
+            // switch to video ends alternative-display mode.
             if (initialized && captureMode === Camera.CaptureVideo) {
                 Settings.mode.flash = Camera.FlashOff
+                if (Settings.global.captureMode !== "image"
+                        && (captureView.alternativeDisplayOn || captureView.alternativeDisplayPending))
+                    captureView.stopAlternativeDisplay()
             }
             captureView._resetFocus()
         }
 
         cameraState: {
-            if (captureView.effectiveActive && !captureView._unload) {
+            if (captureView.alternativeDisplayOn || captureView.alternativeDisplayPending) {
+                return Camera.UnloadedState
+            } else if (captureView.effectiveActive && !captureView._unload) {
                 if (CameraConfigs.ready) {
                     return Camera.ActiveState
                 } else {
@@ -605,6 +695,8 @@ FocusScope {
             if (cameraState == Camera.ActiveState && captureOverlay) {
                 captureView.loaded()
             }
+            if (captureView.alternativeDisplayPending)
+                captureView._alternativeDisplayStartIfReleased(captureView._alternativeDisplayGen)
         }
 
         onCameraStatusChanged: {
@@ -617,6 +709,12 @@ FocusScope {
                 captureView._cameraWentInactive = true
                 _captureQueued = false
                 captureBusy = false
+            }
+
+            if (captureView.alternativeDisplayPending
+                    && camera.cameraState === Camera.UnloadedState
+                    && camera.cameraStatus === Camera.UnloadedStatus) {
+                captureView._alternativeDisplayStartIfReleased(captureView._alternativeDisplayGen)
             }
 
             var backCameras = []
@@ -1099,14 +1197,15 @@ FocusScope {
             //% "Shutter"
             return qsTrId("camera-la-softkey_shutter")
         }
-        enabled: captureView._canCapture && !captureView._captureOnFocus
-        onTriggered: captureView.lockFocusAndCapture()
+        enabled: (captureView.alternativeDisplayOn || captureView._canCapture) && !captureView._captureOnFocus
+        onTriggered: captureView.alternativeDisplayOn ? captureView.alternativeDisplayCapture() : captureView.lockFocusAndCapture()
     }
 
     Permissions {
         enabled: captureView.activeFocus
                     && camera.captureMode == Camera.CaptureStillImage
-                    && camera.cameraState == Camera.ActiveState
+                    && (camera.cameraState == Camera.ActiveState
+                        || captureView.alternativeDisplayOn || captureView.alternativeDisplayPending)
         autoRelease: true
         applicationClass: "camera"
 
@@ -1131,5 +1230,42 @@ FocusScope {
 
     AboutSettings {
         id: aboutSettings
+    }
+
+    DBusInterface {
+        id: alternativeDisplayBus
+
+        // The feature is the dconf key. Leave the bus alone where it is false,
+        // so other phones do not watch a service they do not have.
+        bus: DBus.SystemBus
+        service: Settings.global.alternativeDisplay ? "org.sailfishos.alternativedisplay" : ""
+        path: "/org/sailfishos/alternativedisplay"
+        iface: "org.sailfishos.alternativedisplay"
+        signalsEnabled: Settings.global.alternativeDisplay
+
+        function stopped() {
+            if (!captureView.alternativeDisplayOn && !captureView.alternativeDisplayPending)
+                return
+            captureView._alternativeDisplayGen++
+            captureView._alternativeDisplayStartSent = false
+            captureView.alternativeDisplayOn = false
+            captureView.alternativeDisplayPending = false
+            captureView.alternativeDisplayBusy = false
+        }
+    }
+
+    Label {
+        anchors.centerIn: parent
+        // Stay clear of the exposure slider on the side, so the line wraps
+        // before it meets that control.
+        width: parent.width - 2 * (Theme.itemSizeMedium + Theme.paddingLarge)
+        visible: captureView.alternativeDisplayOn
+        horizontalAlignment: Text.AlignHCenter
+        wrapMode: Text.Wrap
+        color: Theme.primaryColor
+        font.pixelSize: Theme.fontSizeSmall
+        z: 3
+        //% "Viewfinder is on the alternative display"
+        text: qsTrId("camera-la-alternative_display_viewfinder")
     }
 }
