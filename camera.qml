@@ -52,7 +52,8 @@ ApplicationWindow {
             NumberAnimation { duration: 150; easing.type: Easing.InOutQuad }
         }
 
-        filters: [ qrFilter ]
+        displayStream.enabled: Settings.global.alternativeDisplay
+        filters: [ qrFilter, videoOutput.streamFilter ]
     }
 
     QrFilter {

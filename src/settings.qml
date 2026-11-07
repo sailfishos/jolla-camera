@@ -85,6 +85,14 @@ SettingsBase {
         property var exposureCompensationValues: [ 4, 3, 2, 1, 0, -1, -2, -3, -4 ]
         property string viewfinderGrid: "none"
 
+        // Optional display provider; absent on devices without a secondary panel.
+        property bool alternativeDisplay
+        property string alternativeDisplayCatalog
+        property string alternativeDisplayText
+        property string alternativeDisplayEndText
+        property int alternativeDisplayRotation
+        property bool alternativeDisplayMirror
+
         ConfigurationGroup {
             id: modeSettings
 
