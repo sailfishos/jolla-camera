@@ -91,6 +91,13 @@ FocusScope {
     readonly property bool isPortrait: orientation == Orientation.Portrait
                                        || orientation == Orientation.PortraitInverted
     readonly property bool effectiveActive: (active || recording) && _applicationActive && pageStack.depth < 2
+    readonly property bool previewDisplayModeAllowed: Settings.global.captureMode === "image"
+                                                      && camera.position === Camera.BackFace
+    readonly property bool canStartPreviewDisplay: previewDisplayModeAllowed
+                                                    && viewfinder && viewfinder.displayStream.available
+                                                    && effectiveActive && idle
+                                                    && camera.cameraStatus === Camera.ActiveStatus
+                                                    && AccessPolicy.cameraEnabled
 
     readonly property bool _canCapture: {
         switch (camera.captureMode) {
@@ -317,6 +324,21 @@ FocusScope {
         return "-1x-1"
     }
 
+    Connections {
+        target: captureView.viewfinder ? captureView.viewfinder.displayStream : null
+        onErrorChanged: {
+            if (target.errorString.length > 0)
+                previewError.publish()
+        }
+    }
+
+    Notification {
+        id: previewError
+
+        //% "Could not show the preview on the alternative display"
+        body: qsTrId("camera-la-alternative_preview_error")
+    }
+
     Notification {
         id: microphoneWarningNotification
 
@@ -364,13 +386,37 @@ FocusScope {
         }
     }
 
+    onPreviewDisplayModeAllowedChanged: {
+        if (!previewDisplayModeAllowed && viewfinder)
+            viewfinder.displayStream.requested = false
+    }
+
     onEffectiveActiveChanged: {
         qrFilter.clearResult()
 
         if (!effectiveActive) {
+            if (viewfinder)
+                viewfinder.displayStream.requested = false
             _resetFocus()
             captureTimer.reset()
         }
+    }
+
+    Binding {
+        target: captureView.viewfinder
+        property: "uiRotation"
+        value: captureView.pageRotation
+    }
+
+    Binding {
+        target: captureView.viewfinder ? captureView.viewfinder.streamFilter : null
+        property: "rotation"
+        value: captureView.viewfinderOrientation + Settings.global.alternativeDisplayRotation
+    }
+    Binding {
+        target: captureView.viewfinder ? captureView.viewfinder.streamFilter : null
+        property: "mirrored"
+        value: Settings.global.alternativeDisplayMirror
     }
 
     Timer {
@@ -665,6 +711,7 @@ FocusScope {
                 // moving the device until it's safe again.
                 if (camera.exposure.exposureMode == Camera.ExposureHDR) {
                     shutterEvent.play()
+                    captureView.viewfinder.displayStream.pulse()
                     captureAnimation.start()
                 }
 
@@ -680,6 +727,7 @@ FocusScope {
             onImageExposed: {
                 if (camera.exposure.exposureMode != Camera.ExposureHDR) {
                     shutterEvent.play()
+                    captureView.viewfinder.displayStream.pulse()
                     captureAnimation.start()
                 } else {
                     flashAnimation.start()

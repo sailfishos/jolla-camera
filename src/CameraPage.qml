@@ -19,12 +19,23 @@ Page {
     id: page
 
     property alias viewfinder: captureView.viewfinder
+    readonly property DisplayStream previewDisplay: viewfinder ? viewfinder.displayStream : null
+
     property bool galleryActive
     property url galleryView
     readonly property bool captureModeActive: switcherView.currentIndex === 1
     readonly property bool galleryVisible: galleryLoader.visible
     readonly property int galleryIndex: galleryLoader.item ? galleryLoader.item.currentIndex : 0
     readonly property QtObject captureModel: galleryLoader.item ? galleryLoader.item.captureModel : null
+
+    function togglePreviewDisplay() {
+        if (!previewDisplay)
+            return
+        if (previewDisplay.requested)
+            previewDisplay.requested = false
+        else if (captureView.canStartPreviewDisplay)
+            previewDisplay.requested = true
+    }
 
     function resetZoom() {
         switcherView.resetZoom()
@@ -48,9 +59,11 @@ Page {
     allowedOrientations: captureView.inButtonLayout ? page.orientation : Orientation.All
     cutoutMode: CutoutMode.FullScreen
 
-    // Back from the camera roll returns to the viewfinder; the launcher key is the way
-    // out of the camera itself.
-    SoftKeys.left: page.galleryActive ? backToViewfinder : lens
+    // Back returns from the camera roll or ends the alternative preview; the
+    // launcher key leaves the camera itself.
+    SoftKeys.left: page.galleryActive ? backToViewfinder
+                   : page.previewDisplay && page.previewDisplay.requested
+                     ? endPreviewDisplay : lens
     SoftKeys.menu: page.galleryActive && galleryLoader.item ? galleryLoader.item.menu : cameraMenu
 
     SoftKeyAction {
@@ -61,11 +74,22 @@ Page {
     }
 
     SoftKeyAction {
+        id: endPreviewDisplay
+
+        actionType: SoftKeyAction.BackAction
+        onTriggered: {
+            if (page.previewDisplay)
+                page.previewDisplay.requested = false
+        }
+    }
+
+    SoftKeyAction {
         id: lens
 
         //% "Lens"
         text: qsTrId("camera-la-softkey_lens")
         enabled: captureView.idle && captureView.camera.hasCameraOnBothSides
+                 && (!page.previewDisplay || !page.previewDisplay.requested)
         onTriggered: captureView.switchToNextCamera()
     }
 
@@ -81,6 +105,18 @@ Page {
                     qsTrId("camera-me-photo_mode")
             enabled: captureView.idle
             onDelayedClick: Settings.global.captureMode = Settings.global.captureMode === "image" ? "video" : "image"
+        }
+
+        MenuItem {
+            text: page.previewDisplay && page.previewDisplay.requested
+                  ? qsTrId(Settings.global.alternativeDisplayEndText)
+                  : qsTrId(Settings.global.alternativeDisplayText)
+            visible: page.previewDisplay && Settings.global.alternativeDisplayText
+                     && Settings.global.alternativeDisplayEndText
+                     && (page.previewDisplay.requested
+                         || (page.previewDisplay.available && captureView.previewDisplayModeAllowed))
+            enabled: page.previewDisplay && (page.previewDisplay.requested || captureView.canStartPreviewDisplay)
+            onDelayedClick: page.togglePreviewDisplay()
         }
 
         MenuItem {
@@ -242,6 +278,12 @@ Page {
         Keys.onPressed: {
             if (!event.isAutoRepeat && event.key == Qt.Key_Camera) {
                 switcherView.returnToCaptureMode()
+            } else if (!event.isAutoRepeat && event.key === Qt.Key_F24
+                       && page.previewDisplay
+                       && (page.previewDisplay.requested
+                           || (page.previewDisplay.available && captureView.previewDisplayModeAllowed))) {
+                page.togglePreviewDisplay()
+                event.accepted = true
             }
         }
 

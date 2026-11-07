@@ -42,7 +42,7 @@ Requires:  nemo-qml-plugin-configuration-qt5
 Requires:  nemo-qml-plugin-notifications-qt5 >= 1.1.2
 Requires:  nemo-qml-plugin-systemsettings >= 0.5.21
 Requires:  libkeepalive >= 1.7.0
-Requires:  sailfish-components-media-qt5 >= 0.0.18
+Requires:  sailfish-components-media-qt5 >= 0.9.19
 Requires:  sailfish-components-gallery-qt5 >= 1.1.10
 Requires:  sailfish-policy >= 0.2.59
 Requires:  jolla-settings
