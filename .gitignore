@@ -11,3 +11,9 @@ moc_*
 Makefile
 *.ts
 *.qm
+Makefile.application
+RPMS/
+documentation.list
+jolla-camera
+lockscreen/jolla-camera-lockscreen
+

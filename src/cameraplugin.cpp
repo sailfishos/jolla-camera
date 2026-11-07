@@ -9,6 +9,7 @@
 #include <QQmlEngine>
 #include <QLocale>
 
+#include <MDConfItem>
 #include <qqml.h>
 
 #include "capturemodel.h"
@@ -38,6 +39,28 @@ public:
 };
 
 
+static bool isTranslationCatalogName(const QString &name)
+{
+    if (name.isEmpty() || name == QLatin1String("jolla-camera") || name.size() > 64)
+        return false;
+
+    for (const QChar &c : name) {
+        if (!c.isLetterOrNumber() && c != QLatin1Char('_') && c != QLatin1Char('-'))
+            return false;
+    }
+    return true;
+}
+
+static void loadTranslationCatalog(QQmlEngine *engine, const QString &name)
+{
+    AppTranslator *engineeringEnglish = new AppTranslator(engine);
+    AppTranslator *translator = new AppTranslator(engine);
+    const QString directory = QStringLiteral("/usr/share/translations");
+
+    engineeringEnglish->load(name + QLatin1String("_eng_en"), directory);
+    translator->load(QLocale(), name, QLatin1String("-"), directory);
+}
+
 class CameraPlugin : public QQmlExtensionPlugin
 {
     Q_OBJECT
@@ -48,13 +71,16 @@ public:
     void initializeEngine(QQmlEngine *engine, const char *uri)
     {
         Q_UNUSED(uri)
-        Q_UNUSED(engine)
         Q_ASSERT(QLatin1String(uri) == QLatin1String("com.jolla.camera"));
 
-        AppTranslator *engineeringEnglish = new AppTranslator(engine);
-        AppTranslator *translator = new AppTranslator(engine);
-        engineeringEnglish->load("jolla-camera_eng_en", "/usr/share/translations");
-        translator->load(QLocale(), "jolla-camera", "-", "/usr/share/translations");
+        loadTranslationCatalog(engine, QStringLiteral("jolla-camera"));
+
+        // Device configuration names the catalog that translates the
+        // alternative-display menu. Absent on other devices.
+        MDConfItem catalog(QStringLiteral("/apps/jolla-camera/alternativeDisplayCatalog"));
+        const QString extra = catalog.value().toString();
+        if (isTranslationCatalogName(extra))
+            loadTranslationCatalog(engine, extra);
     }
 
     virtual void registerTypes(const char *uri)

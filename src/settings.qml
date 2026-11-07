@@ -85,6 +85,15 @@ SettingsBase {
         property var exposureCompensationValues: [ 4, 3, 2, 1, 0, -1, -2, -3, -4 ]
         property string viewfinderGrid: "none"
 
+        // Rear-camera viewfinder on an alternative display. Device
+        // configuration sets this; other devices leave it false and the
+        // menu item stays hidden. The catalog and the two ids are that
+        // device's translated name for the mode.
+        property bool alternativeDisplay: false
+        property string alternativeDisplayCatalog
+        property string alternativeDisplayText
+        property string alternativeDisplayEndText
+
         ConfigurationGroup {
             id: modeSettings
 
